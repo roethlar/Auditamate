@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm:*)",
+      "Bash(powershell:*)",
+      "Bash(Remove-Item \"C:\\Users\\mcoelho\\source\\repos\\audits\\check-syntax.ps1\" -Force)"
+    ],
+    "deny": []
+  }
+}

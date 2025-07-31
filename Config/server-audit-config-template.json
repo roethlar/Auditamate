@@ -1,0 +1,79 @@
+{
+    "ServerAuditSettings": {
+        "DefaultCredential": null,
+        "MaxConcurrentAudits": 10,
+        "TimeoutSeconds": 300,
+        "ResolveDomainGroups": true,
+        "IncludeOfflineServers": false,
+        "RetryFailedServers": true,
+        "RetryAttempts": 2
+    },
+    "ServerGroups": {
+        "CriticalServers": {
+            "Description": "Domain Controllers and Critical Infrastructure",
+            "Servers": [
+                "DC01.corp.company.com",
+                "DC02.corp.company.com",
+                "EXCH01.corp.company.com",
+                "SQL01.corp.company.com"
+            ],
+            "AuditFrequency": "Weekly",
+            "ComplianceLevel": "High"
+        },
+        "ApplicationServers": {
+            "Description": "Business Application Servers",
+            "Servers": [
+                "APP01.corp.company.com",
+                "APP02.corp.company.com",
+                "WEB01.corp.company.com",
+                "WEB02.corp.company.com"
+            ],
+            "AuditFrequency": "Monthly",
+            "ComplianceLevel": "Medium"
+        },
+        "FileServers": {
+            "Description": "File and Print Servers",
+            "Servers": [
+                "FILE01.corp.company.com",
+                "FILE02.corp.company.com",
+                "PRINT01.corp.company.com"
+            ],
+            "AuditFrequency": "Quarterly",
+            "ComplianceLevel": "Low"
+        },
+        "DevelopmentServers": {
+            "Description": "Development and Test Servers",
+            "Servers": [
+                "DEV01.corp.company.com",
+                "DEV02.corp.company.com",
+                "TEST01.corp.company.com"
+            ],
+            "AuditFrequency": "Quarterly",
+            "ComplianceLevel": "Low"
+        }
+    },
+    "ComplianceRules": {
+        "MaxLocalAdmins": 3,
+        "AllowedLocalAccounts": [
+            "Administrator"
+        ],
+        "RequiredDomainGroups": [
+            "Domain Admins",
+            "Server Administrators"
+        ],
+        "ProhibitedAccounts": [
+            "Guest",
+            "DefaultAccount"
+        ],
+        "MaxInactiveDays": 90,
+        "RequireGroupPolicy": true
+    },
+    "EmailAlerts": {
+        "EnableAlerts": true,
+        "AlertOnHighSeverity": true,
+        "AlertRecipients": [
+            "security@company.com",
+            "serveradmins@company.com"
+        ]
+    }
+}

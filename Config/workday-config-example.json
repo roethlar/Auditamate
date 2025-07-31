@@ -1,0 +1,35 @@
+{
+  "WorkdaySettings": {
+    "TenantUrl": "https://wd2-impl-services1.workday.com/ccx/service/yourcompany",
+    "ApiVersion": "v42.0",
+    "UseRESTAPI": true,
+    "AuthenticationMethod": "BasicAuth",
+    "IntegrationSystemUser": "ISU_AD_Integration@yourcompany",
+    "RaaSReports": {
+      "TerminatedWorkersReport": "CR_Terminated_Workers_Last_30_Days",
+      "ActiveWorkersReport": "CR_Active_Workers_Full"
+    }
+  },
+  "TerminationValidation": {
+    "GracePeriodDays": 1,
+    "CheckAzureAD": true,
+    "CheckOnPremiseAD": true,
+    "CheckO365Licenses": true,
+    "RequireManagerApproval": false
+  },
+  "DataMapping": {
+    "EmployeeIDField": "Employee_ID",
+    "EmailField": "Primary_Work_Email",
+    "UsernameField": "User_Name",
+    "TerminationDateField": "Termination_Date",
+    "LastDayOfWorkField": "Last_Day_of_Work"
+  },
+  "NotificationSettings": {
+    "SendNonComplianceAlerts": true,
+    "AlertRecipients": [
+      "security-team@company.com",
+      "identity-management@company.com"
+    ],
+    "EscalationThresholdDays": 3
+  }
+}

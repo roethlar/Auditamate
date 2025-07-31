@@ -1,0 +1,24 @@
+# Output and logs
+Output/
+*.log
+*.transcript
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# User-specific config (keep templates)
+Config/audit-config.json
+Config/privileged-access-config.json
+Config/workday-config.json
+
+# Job files
+*.job.json
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# PowerShell
+*.ps1xml

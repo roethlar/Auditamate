@@ -179,12 +179,12 @@ if ($results.Warnings -gt 0) {
 }
 
 if ($results.Failed -eq 0) {
-    Write-Host "`n✓ System ready for AD auditing!" -ForegroundColor Green
+    Write-Host "`nSystem ready for AD auditing!" -ForegroundColor Green
     
     Write-Host "`nNext steps:" -ForegroundColor Cyan
     Write-Host "1. Review README.md for usage examples" -ForegroundColor White
     Write-Host "2. Edit audit-config.json for your environment" -ForegroundColor White
-    Write-Host '3. Run: .\Run-ADCompleteAudit.ps1 -Groups "Domain Admins"' -ForegroundColor White
+    Write-Host "3. Run: .\Run-ADCompleteAudit.ps1 -Groups 'Domain Admins'" -ForegroundColor White
 }
 
 Write-Host ""

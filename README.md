@@ -1,37 +1,50 @@
-# Active Directory SOX Compliance Audit Tool
+# Auditamate - Active Directory SOX Compliance Audit Tool
 
-A comprehensive PowerShell-based solution for automating Active Directory audits for SOX compliance requirements.
+A comprehensive PowerShell-based solution for automating Active Directory audits for SOX compliance requirements. Features an interactive setup wizard and automated evidence collection for compliance reporting.
 
 ## 🚀 Quick Start (5 Minutes)
 
-### First Time Setup
+### First Time Setup - Run the Wizard!
 ```powershell
-# 1. Check prerequisites
-.\Test-Prerequisites.ps1
+# Just run the installer - it handles everything!
+.\INSTALL.ps1
+```
 
-# 2. Basic AD audit (evidence capture is automatic)
+The setup wizard will:
+- ✅ Check and install prerequisites
+- ✅ Create configuration files
+- ✅ Set up Azure app registration (optional)
+- ✅ Configure email and audit settings
+- ✅ Test the installation
+
+### After Setup - Run Your First Audit
+```powershell
+# Basic AD audit (evidence capture is automatic)
 .\Run-ADCompleteAudit.ps1 -Groups "Domain Admins", "Enterprise Admins"
 
-# 3. Save for reuse
+# Save configuration for reuse
 .\Run-ADCompleteAudit.ps1 -Groups "Domain Admins" -SaveJob monthly-audit.json
 
-# 4. Re-run saved job
+# Re-run saved job
 .\Run-ADCompleteAudit.ps1 -Job monthly-audit.json
 ```
 
 ## Features
 
-- **Automated AD Group Analysis**: Collect detailed membership data for security groups
-- **User Status Tracking**: Monitor enabled/disabled users, last logon times, password ages
-- **Screenshot Capture**: Interactive screenshot tool for documenting AD console views
-- **Multi-Format Reporting**: Generate both HTML and Excel reports
-- **Email Automation**: Send reports directly to audit teams
-- **Job Management**: Save and reuse audit configurations
-- **Multi-Domain Support**: Audit forest root and child domains
-- **Entra ID/Exchange**: Audit cloud admin roles and Exchange RBAC
-- **SOX Evidence**: Automatic capture of PowerShell commands for compliance
-- **AuditBoard Integration**: Upload results directly to AuditBoard platform
-- **Local Admin Auditing**: Check administrator access on critical servers
+- **🧙 Interactive Setup Wizard**: Guided installation and configuration
+- **📊 Automated AD Group Analysis**: Collect detailed membership data for security groups
+- **👤 User Status Tracking**: Monitor enabled/disabled users, last logon times, password ages
+- **📸 Screenshot Capture**: Interactive screenshot tool for documenting AD console views
+- **📑 Multi-Format Reporting**: Generate both HTML and Excel reports
+- **📧 Email Automation**: Send reports directly to audit teams
+- **💾 Job Management**: Save and reuse audit configurations
+- **🌲 Multi-Domain Support**: Audit forest root and child domains
+- **☁️ Entra ID/Exchange**: Audit cloud admin roles and Exchange RBAC
+- **📋 SOX Evidence**: Automatic capture of PowerShell commands for compliance
+- **🎯 AuditBoard Integration**: Upload results directly to AuditBoard platform
+- **🖥️ Local Admin Auditing**: Check administrator access on critical servers
+- **🔒 Secure Credential Management**: Built-in credential manager for service accounts
+- **📝 Structured Logging**: Comprehensive audit trails and error handling
 
 ## Prerequisites
 
@@ -40,36 +53,45 @@ A comprehensive PowerShell-based solution for automating Active Directory audits
 - Domain Admin or appropriate AD read permissions
 - Excel COM object support (for Excel exports)
 
+**Note:** The setup wizard will check all prerequisites and can install missing PowerShell modules automatically!
+
 ## Installation
 
-### Quick Install (Recommended)
+### 🎯 Recommended: Use the Setup Wizard
 ```powershell
-# Run the installer - it will handle everything!
+# Run the installer - it's interactive and guides you through everything!
 .\INSTALL.ps1
 ```
 
-The installer will:
-- Check and install prerequisites
-- Create configuration files
-- Set up Azure app registration (optional)
-- Configure email settings
-- Test the installation
+### Setup Wizard Features
+The wizard automatically detects if this is a first-time installation or an update:
 
-### Manual Installation
-1. Clone or download this repository to your audit workstation
-2. Run setup wizard:
-   ```powershell
-   .\Setup-AuditTool.ps1
-   ```
-3. Follow the prompts to configure your environment
+**First-Time Installation:**
+- Checks system prerequisites
+- Installs missing PowerShell modules
+- Creates all configuration files
+- Sets up Azure app registration (optional)
+- Configures email settings
+- Tests connections and permissions
 
-### Update Existing Installation
+**Existing Installation:**
+- Option 1: Check prerequisites only
+- Option 2: Update configurations
+- Option 3: Run full setup wizard
+
+### Advanced Setup Options
 ```powershell
-# Check prerequisites
+# Check prerequisites without making changes
 .\Setup-AuditTool.ps1 -Mode Check
 
-# Update configurations
+# Update existing configuration
 .\Setup-AuditTool.ps1 -Mode Update
+
+# Skip optional components
+.\Setup-AuditTool.ps1 -SkipAzureApp -SkipWorkday
+
+# Non-interactive mode (uses defaults)
+.\Setup-AuditTool.ps1 -NonInteractive
 ```
 
 ## Common Audit Scenarios
@@ -215,15 +237,30 @@ Register-ScheduledTask -TaskName "Monthly SOX Audit" -Action $action -Trigger $t
 
 ## Troubleshooting
 
+### Run the Setup Wizard Diagnostic
 ```powershell
-# Check prerequisites
+# The wizard can check and fix most issues
+.\INSTALL.ps1
+# Select option 1: Check prerequisites only
+```
+
+### Manual Troubleshooting
+```powershell
+# Quick prerequisite check
 .\Test-Prerequisites.ps1
 
 # Common fixes:
 # Access Denied: Run as Administrator, verify domain admin membership
-# Module errors: Install-Module ActiveDirectory, ExchangeOnlineManagement
+# Module errors: The setup wizard will install missing modules
 # Excel errors: Reports still work - use HTML/CSV format
-# Graph errors: Run .\New-AzureAppRegistration.ps1 for setup
+# Graph errors: Re-run setup wizard to configure Azure app
+# Email errors: Update SMTP settings via setup wizard
+```
+
+### Configuration Issues
+If you need to update any configuration:
+```powershell
+.\Setup-AuditTool.ps1 -Mode Update
 ```
 
 ## Built-in Help

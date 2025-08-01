@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Validates user terminations between Workday and Active Directory/Azure AD.
 
@@ -36,7 +36,7 @@
     Requires: Workday API access, AD read permissions
 #>
 
-#Requires -RunAsAdministrator
+# No admin rights needed for AD queries
 #Requires -Modules ActiveDirectory
 
 [CmdletBinding()]

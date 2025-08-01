@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Audits local administrator group membership on Windows servers.
 
@@ -65,7 +65,7 @@
     Requires: Admin access to target servers, WinRM enabled
 #>
 
-#Requires -RunAsAdministrator
+# No admin rights needed for AD queries
 #Requires -Modules ActiveDirectory
 
 [CmdletBinding()]

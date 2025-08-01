@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Audits privileged access across Entra ID and Exchange environments.
 
@@ -65,7 +65,7 @@
     Requires: Microsoft Graph API permissions (see documentation)
 #>
 
-#Requires -RunAsAdministrator
+# No admin rights needed for AD queries
 
 [CmdletBinding()]
 param(
@@ -232,7 +232,7 @@ try {
         }
         
         $jobConfig | ConvertTo-Json | Out-File $SaveJob -Encoding UTF8
-        Write-Host "`n✓ Job saved to: $SaveJob" -ForegroundColor Green
+        Write-Host "`n*" Job saved to: $SaveJob" -ForegroundColor Green
     }
     
     Write-Host "`n===============================================" -ForegroundColor Green

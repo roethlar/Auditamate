@@ -95,15 +95,32 @@ try {
     } else {
         # Create new app
         Write-Host "`nCreating app registration: $AppName" -ForegroundColor Yellow
-        $app = New-AzADApplication -DisplayName $AppName -IdentifierUris "api://$(New-Guid)"
-        Write-Host "App created with ID: $($app.AppId)" -ForegroundColor Green
+        try {
+            $appId = New-Guid
+            $app = New-AzADApplication -DisplayName $AppName -IdentifierUris "api://$appId"
+            Write-Host "App created with ID: $($app.AppId)" -ForegroundColor Green
+        } catch {
+            Write-Host "Error creating app with auto-generated URI. Trying without URI..." -ForegroundColor Yellow
+            # Try without IdentifierUris as it's optional
+            $app = New-AzADApplication -DisplayName $AppName
+            if ($app) {
+                Write-Host "App created with ID: $($app.AppId)" -ForegroundColor Green
+            } else {
+                throw "Failed to create app registration"
+            }
+        }
     }
     
     # Create service principal if needed
-    $sp = Get-AzADServicePrincipal -ApplicationId $app.AppId -ErrorAction SilentlyContinue
-    if (!$sp) {
-        Write-Host "Creating service principal..." -ForegroundColor Yellow
-        $sp = New-AzADServicePrincipal -ApplicationId $app.AppId
+    if ($app -and $app.AppId) {
+        $sp = Get-AzADServicePrincipal -ApplicationId $app.AppId -ErrorAction SilentlyContinue
+        if (!$sp) {
+            Write-Host "Creating service principal..." -ForegroundColor Yellow
+            $sp = New-AzADServicePrincipal -ApplicationId $app.AppId
+        }
+    } else {
+        Write-Host "ERROR: App registration failed - no App ID available" -ForegroundColor Red
+        exit 1
     }
     
     # Define required permissions

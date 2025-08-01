@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Performs a comprehensive Active Directory group audit for SOX compliance.
 
@@ -63,7 +63,7 @@
     Requires: Domain Admin or delegated AD read permissions
 #>
 
-#Requires -RunAsAdministrator
+# No admin rights needed for AD queries
 #Requires -Modules ActiveDirectory
 
 [CmdletBinding()]

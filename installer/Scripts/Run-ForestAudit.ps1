@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Performs comprehensive AD audit across multi-domain forest environment.
 
@@ -48,7 +48,7 @@
     Requires Domain Admin in child domain or Enterprise Admin for full access.
 #>
 
-#Requires -RunAsAdministrator
+# No admin rights needed for AD queries
 #Requires -Modules ActiveDirectory
 
 [CmdletBinding()]
@@ -322,7 +322,7 @@ try {
         }
         
         $jobConfig | ConvertTo-Json | Out-File $SaveJob -Encoding UTF8
-        Write-Host "`n✓ Job saved to: $SaveJob" -ForegroundColor Green
+        Write-Host "`n*" Job saved to: $SaveJob" -ForegroundColor Green
     }
     
     Write-Host "`nAudit Summary:" -ForegroundColor Yellow

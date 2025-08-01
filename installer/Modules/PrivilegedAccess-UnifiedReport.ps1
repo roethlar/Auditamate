@@ -395,7 +395,7 @@ function New-PrivilegedAccessHTMLReport {
     if ($AuditData.ComplianceIssues.Count -gt 0) {
         $htmlContent += @"
         <section class="section">
-            <h2>⚠️ Compliance Issues ($($AuditData.ComplianceIssues.Count))</h2>
+            <h2>* Compliance Issues ($($AuditData.ComplianceIssues.Count))</h2>
 "@
         foreach ($issue in $AuditData.ComplianceIssues) {
             $htmlContent += "<div class='compliance-issue'>$issue</div>"

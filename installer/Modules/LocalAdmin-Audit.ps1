@@ -436,7 +436,7 @@ function New-LocalAdminHtmlReport {
                     }
                 }
                 
-                rows[i].style.display = found ? '' : 'none';
+                rows[i].style.display = found * '' : 'none';
             }
         }
     </script>

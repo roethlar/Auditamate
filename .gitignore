@@ -2,6 +2,7 @@
 Output/
 *.log
 *.transcript
+PowerShell_transcript.*
 
 # Temporary files
 *.tmp
@@ -28,3 +29,6 @@ Desktop.ini
 # Testing folder
 testing/
 Tests/
+
+# Tool scripts and maintenance
+.tools/

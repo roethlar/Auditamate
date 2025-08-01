@@ -146,10 +146,33 @@ function Get-UserConfig {
     return $null
 }
 
+function Backup-ExistingConfig {
+    param([string]$ConfigPath)
+    
+    if (Test-Path $ConfigPath) {
+        $backupPath = "$ConfigPath.backup.$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        Write-Status "Backing up existing configuration..." "Progress"
+        Copy-Item -Path $ConfigPath -Destination $backupPath -Recurse -Force
+        Write-Status "Configuration backed up to: $backupPath" "Success"
+        return $backupPath
+    }
+    return $null
+}
+
 function Initialize-DirectoryStructure {
-    param([string]$TargetPath)
+    param(
+        [string]$TargetPath,
+        [bool]$PreserveConfig = $true
+    )
     
     Write-Status "Creating directory structure..." "Progress"
+    
+    # If doing complete reinstall and deleting config
+    if (-not $PreserveConfig -and (Test-Path "$TargetPath\Config")) {
+        $backupPath = Backup-ExistingConfig -ConfigPath "$TargetPath\Config"
+        Write-Status "Removing existing configuration..." "Warning"
+        Remove-Item -Path "$TargetPath\Config" -Recurse -Force
+    }
     
     $directories = @(
         $TargetPath,
@@ -170,7 +193,7 @@ function Initialize-DirectoryStructure {
         }
     }
     
-    # Create version file
+    # Create or update version file
     "2.0" | Out-File "$TargetPath\version.txt" -Encoding UTF8
 }
 
@@ -594,16 +617,38 @@ if ($Mode -eq "Check") {
 $installation = Test-ExistingInstallation -Path $TargetDirectory
 
 if ($installation.Exists -and $installation.IsValid) {
-    Write-Host "Existing installation found at: $TargetDirectory" -ForegroundColor Yellow
+    Write-Host "`nExisting installation found at: $TargetDirectory" -ForegroundColor Yellow
     Write-Host "Version: $($installation.Version)" -ForegroundColor Gray
     
-    # For existing installations, we're in update mode unless explicitly installing
+    # For existing installations, offer update options
     if ($Mode -eq "Install") {
-        Write-Host "`nWarning: Installation already exists at this location." -ForegroundColor Yellow
-        $overwrite = Read-Host "Overwrite existing installation? (Y/N)"
-        if ($overwrite -ne 'Y') {
-            Write-Host "Setup cancelled." -ForegroundColor Red
-            exit 0
+        Write-Host "`nAn installation already exists at this location." -ForegroundColor Yellow
+        Write-Host "`nOptions:" -ForegroundColor Cyan
+        Write-Host "1. Update - Copy only new/changed files (preserves configurations)" -ForegroundColor White
+        Write-Host "2. Reinstall - Complete fresh installation" -ForegroundColor White
+        Write-Host "3. Cancel" -ForegroundColor White
+        
+        $choice = Read-Host "`nSelect option (1-3)"
+        
+        switch ($choice) {
+            "1" { 
+                $Mode = "Update"
+                Write-Host "`nSwitching to Update mode..." -ForegroundColor Green
+            }
+            "2" {
+                Write-Host "`nComplete reinstall selected." -ForegroundColor Yellow
+                $deleteConfig = Read-Host "Delete existing configuration files? (Y/N)"
+                $script:DeleteExistingConfig = ($deleteConfig -eq 'Y')
+                if ($script:DeleteExistingConfig) {
+                    Write-Host "Configuration files will be deleted." -ForegroundColor Red
+                } else {
+                    Write-Host "Configuration files will be preserved." -ForegroundColor Green
+                }
+            }
+            default {
+                Write-Host "Setup cancelled." -ForegroundColor Red
+                exit 0
+            }
         }
     }
 } elseif ($installation.Exists -and -not $installation.IsValid) {
@@ -651,7 +696,9 @@ if ($installation.Exists -and $installation.IsValid) {
 
 # Create directory structure
 if ($Mode -eq "Install") {
-    Initialize-DirectoryStructure -TargetPath $TargetDirectory
+    # Pass config preservation choice
+    $preserveConfig = -not ($script:DeleteExistingConfig -eq $true)
+    Initialize-DirectoryStructure -TargetPath $TargetDirectory -PreserveConfig $preserveConfig
 }
 
 # Copy script files
@@ -659,14 +706,20 @@ if ($Mode -in @("Install", "Update")) {
     Copy-ScriptFiles -SourcePath (Split-Path $PSScriptRoot -Parent) -TargetPath $TargetDirectory
 }
 
-# Configure global settings
+# Configure settings
 if ($Mode -ne "Check") {
-    $isUpdate = $Mode -in @("Update", "UpdateConfig") -or ($installation.Exists -and $installation.IsValid)
-    Configure-GlobalSettings -ConfigPath "$TargetDirectory\Config" -IsUpdate $isUpdate
+    # Skip configuration if just updating files
+    if ($Mode -eq "Update") {
+        Write-Host "`nSkipping configuration (update mode - files only)" -ForegroundColor Yellow
+    } else {
+        # Configure global settings
+        $isUpdate = $Mode -eq "UpdateConfig" -or ($installation.Exists -and $installation.IsValid -and $Mode -ne "Install")
+        Configure-GlobalSettings -ConfigPath "$TargetDirectory\Config" -IsUpdate $isUpdate
+        
+        # Configure user settings
+        Configure-UserSettings -ConfigPath "$TargetDirectory\Config" -IsUpdate $isUpdate
+    }
 }
-
-# Configure user settings
-Configure-UserSettings -ConfigPath "$TargetDirectory\Config" -IsUpdate ($Mode -in @("Update", "UpdateConfig") -or ($installation.Exists -and $installation.IsValid))
 
 # Final summary
 Write-Host "`n=== Setup Complete ===" -ForegroundColor Green

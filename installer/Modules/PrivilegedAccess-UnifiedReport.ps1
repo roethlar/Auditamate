@@ -728,4 +728,4 @@ function New-PrivilegedAccessHTMLReport {
     return $OutputPath
 }
 
-Export-ModuleMember -Function New-UnifiedPrivilegedAccessReport
+# Functions are automatically available when script is dot-sourced

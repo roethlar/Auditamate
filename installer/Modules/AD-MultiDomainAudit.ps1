@@ -413,4 +413,4 @@ function Get-ADForestPrivilegedGroups {
     return $privilegedGroups
 }
 
-Export-ModuleMember -Function Get-ADForestDomains, Get-ADGroupAuditDataMultiDomain, Get-ADForestPrivilegedGroups
+# Functions are automatically available when script is dot-sourced

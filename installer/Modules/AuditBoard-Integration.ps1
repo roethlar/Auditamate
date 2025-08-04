@@ -321,4 +321,4 @@ function Export-ADToAuditBoard {
 }
 
 # Export functions
-Export-ModuleMember -Function Connect-AuditBoard, New-AuditBoardRecord, Add-AuditBoardAttachment, Export-ADToAuditBoard
+# Functions are automatically available when script is dot-sourced

@@ -306,4 +306,4 @@ function New-TerminationComplianceReport {
 }
 
 # Export functions
-Export-ModuleMember -Function Get-WorkdayTerminatedUsers, Get-WorkdayUserViaSOAP, Compare-WorkdayADTerminations, New-TerminationComplianceReport
+# Functions are automatically available when script is dot-sourced

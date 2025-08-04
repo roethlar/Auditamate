@@ -418,4 +418,4 @@ function New-ADHtmlReport {
     }
 }
 
-Export-ModuleMember -Function New-ADHtmlReport
+# Functions are automatically available when script is dot-sourced

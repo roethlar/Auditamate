@@ -643,4 +643,4 @@ function New-LocalAdminHtmlReport {
 }
 
 # Export functions
-Export-ModuleMember -Function Get-LocalAdminMembers, Get-LocalAdminAuditData, New-LocalAdminHtmlReport
+# Functions are automatically available when script is dot-sourced

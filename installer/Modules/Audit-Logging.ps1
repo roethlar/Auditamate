@@ -73,4 +73,4 @@ function Stop-AuditLog {
 }
 
 # Export functions
-Export-ModuleMember -Function Initialize-AuditLog, Write-AuditLog, Stop-AuditLog
+# Functions are automatically available when script is dot-sourced

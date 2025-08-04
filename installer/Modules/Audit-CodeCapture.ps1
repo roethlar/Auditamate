@@ -338,4 +338,4 @@ function Invoke-AuditCommand {
     return $output
 }
 
-Export-ModuleMember -Function Start-AuditCodeCapture, Add-AuditCommand, New-AuditCodeDocument, Stop-AuditCodeCapture, Invoke-AuditCommand
+# Functions are automatically available when script is dot-sourced

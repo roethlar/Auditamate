@@ -159,4 +159,4 @@ function Start-InteractiveADScreenCapture {
     return $screenshots
 }
 
-Export-ModuleMember -Function Get-ScreenCapture, Get-ADConsoleScreenshot, Start-InteractiveADScreenCapture
+# Functions are automatically available when script is dot-sourced

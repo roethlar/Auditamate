@@ -199,4 +199,4 @@ function New-AuditEmailConfiguration {
     return $config
 }
 
-Export-ModuleMember -Function Send-ADComplianceReport, New-AuditEmailConfiguration
+# Functions are automatically available when script is dot-sourced

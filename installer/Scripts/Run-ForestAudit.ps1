@@ -146,11 +146,8 @@ try {
     
     # Start code capture
     if ($CaptureCommands) {
-        if (Show-ScreenshotWarning) {
-            Start-AuditCodeCapture -AuditName "Multi-Domain Forest AD Audit" -OutputPath "$OutputDirectory\CodeEvidence"
-        } else {
-            $CaptureCommands = $false
-        }
+        Show-ScreenshotWarning
+        Start-AuditCodeCapture -AuditName "Multi-Domain Forest AD Audit" -OutputPath "$OutputDirectory\CodeEvidence"
     }
     
     # Load configuration

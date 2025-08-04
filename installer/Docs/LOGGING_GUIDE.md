@@ -69,9 +69,9 @@ When command capture is enabled, the tool takes **full-screen screenshots** that
 - Screenshots serve as visual audit trail for compliance reviews
 
 **Privacy Notice:**
-- Close or minimize any sensitive applications before running audits
+- You will be warned before screenshots begin (3 second pause to close sensitive content)
+- Close or minimize any sensitive applications when you see the warning
 - Screenshots are saved only to the audit output directory
-- You will be prompted for consent before any screenshots are taken
 
 ## Important Notes
 

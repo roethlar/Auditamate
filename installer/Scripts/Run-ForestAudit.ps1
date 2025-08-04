@@ -380,9 +380,7 @@ try {
         }
     }
     
-    Write-Host "`nPress Enter to continue..." -ForegroundColor Gray
-    Read-Host
-    
+    # Don't prompt here - let the calling script handle it
     exit 1
 } finally {
     Stop-Transcript | Out-Null

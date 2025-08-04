@@ -81,7 +81,7 @@ param(
     [switch]$CaptureScreenshots,
     
     [Parameter(Mandatory=$false)]
-    [string]$OutputDirectory = "$PSScriptRoot\Output\$(Get-Date -Format 'yyyy-MM-dd_HHmmss')",
+    [string]$OutputDirectory = "$(Split-Path $PSScriptRoot -Parent)\Output\$(Get-Date -Format 'yyyy-MM-dd_HHmmss')",
     
     [Parameter(Mandatory=$false)]
     [string]$Job,

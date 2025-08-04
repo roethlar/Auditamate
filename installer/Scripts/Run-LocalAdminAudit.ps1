@@ -95,7 +95,7 @@ param(
     [switch]$CaptureCommands = $true,
     
     [Parameter(Mandatory=$false)]
-    [string]$OutputDirectory = "$PSScriptRoot\Output\LocalAdmin_$(Get-Date -Format 'yyyy-MM-dd_HHmmss')",
+    [string]$OutputDirectory = "$(Split-Path $PSScriptRoot -Parent)\Output\LocalAdmin_$(Get-Date -Format 'yyyy-MM-dd_HHmmss')",
     
     [Parameter(Mandatory=$false)]
     [switch]$UploadToAuditBoard,

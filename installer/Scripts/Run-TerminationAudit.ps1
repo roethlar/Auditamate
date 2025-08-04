@@ -54,7 +54,7 @@ param(
     [switch]$CheckAzureAD,
     
     [Parameter(Mandatory=$false)]
-    [string]$OutputPath = "$PSScriptRoot\Output\Termination_Audit_$(Get-Date -Format 'yyyyMMdd_HHmmss')\Termination_Audit.html"
+    [string]$OutputPath = "$(Split-Path $PSScriptRoot -Parent)\Output\Termination_Audit_$(Get-Date -Format 'yyyyMMdd_HHmmss')\Termination_Audit.html"
 )
 
 Write-Host "`n=== User Termination Compliance Audit ===" -ForegroundColor Cyan

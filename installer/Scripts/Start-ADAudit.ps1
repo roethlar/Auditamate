@@ -116,7 +116,7 @@ do {
         "2" {
             Write-Host "`n=== Forest-Wide Audit ===" -ForegroundColor Cyan
             Write-Host "This will audit all domains in the forest." -ForegroundColor Gray
-            Write-Host "Logs will be saved to: $scriptPath\Scripts\Output\Forest_[timestamp]" -ForegroundColor Gray
+            Write-Host "Logs will be saved to: $scriptPath\Output\Forest_[timestamp]" -ForegroundColor Gray
             $confirm = Read-Host "Continue? (Y/N)"
             if ($confirm -eq 'Y') {
                 & "$scriptPath\Scripts\Run-ForestAudit.ps1"

@@ -184,6 +184,8 @@ function Get-ADGroupAuditDataMultiDomain {
                     EnabledMemberCount = 0
                     DisabledMemberCount = 0
                     LastAuditDate = Get-Date
+                    Status = "Success"
+                    ErrorDetails = $null
                 }
                 
                 # Get group members

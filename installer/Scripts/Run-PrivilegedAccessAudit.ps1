@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Audits privileged access across Entra ID and Exchange environments.
 
@@ -192,7 +192,7 @@ try {
         $auditParams.ExchangeServer = $config.ExchangeServer
     }
     
-    New-UnifiedPrivilegedAccessReport @auditParams
+    $auditResults = New-UnifiedPrivilegedAccessReport @auditParams
     
     # Send email if requested
     if ($SendEmail -and $loadedConfig.EmailSettings) {
@@ -232,7 +232,7 @@ try {
         }
         
         $jobConfig | ConvertTo-Json | Out-File $SaveJob -Encoding UTF8
-        Write-Host "`n*" Job saved to: $SaveJob" -ForegroundColor Green
+        Write-Host "`n* Job saved to: $SaveJob" -ForegroundColor Green
     }
     
     Write-Host "`n===============================================" -ForegroundColor Green

@@ -34,7 +34,7 @@
     Version: 2.0
 #>
 
-# # No admin requirement - will check only if installing to Program Files  # Temporarily disabled for testing
+# No admin requirement - will check only if installing to Program Files
 
 [CmdletBinding()]
 param(
@@ -52,7 +52,13 @@ param(
     [switch]$SkipWorkday,
     
     [Parameter(Mandatory=$false)]
-    [switch]$NonInteractive
+    [switch]$NonInteractive,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$PreserveConfig,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$CleanInstall
 )
 
 $ErrorActionPreference = 'Stop'
@@ -607,7 +613,7 @@ function Test-Prerequisites {
 Write-SetupHeader
 
 # Test prerequisites first
-Test-Prerequisites
+$prereqs = Test-Prerequisites
 if ($Mode -eq "Check") {
     Write-Host "`nPrerequisite check complete." -ForegroundColor Green
     exit 0
@@ -636,13 +642,18 @@ if ($installation.Exists -and $installation.IsValid) {
                 Write-Host "`nSwitching to Update mode..." -ForegroundColor Green
             }
             "2" {
-                Write-Host "`nComplete reinstall selected." -ForegroundColor Yellow
-                $deleteConfig = Read-Host "Delete existing configuration files? (Y/N)"
-                $script:DeleteExistingConfig = ($deleteConfig -eq 'Y')
-                if ($script:DeleteExistingConfig) {
-                    Write-Host "Configuration files will be deleted." -ForegroundColor Red
+                # Handle based on parameters passed from INSTALL.ps1
+                if ($CleanInstall) {
+                    $script:DeleteExistingConfig = $true
+                    Write-Host "Clean installation - all data will be removed." -ForegroundColor Red
+                } elseif ($PreserveConfig) {
+                    $script:DeleteExistingConfig = $false
+                    Write-Host "Reinstalling while preserving configurations." -ForegroundColor Green
                 } else {
-                    Write-Host "Configuration files will be preserved." -ForegroundColor Green
+                    # Legacy behavior if called directly
+                    Write-Host "`nComplete reinstall selected." -ForegroundColor Yellow
+                    $deleteConfig = Read-Host "Delete existing configuration files? (Y/N)"
+                    $script:DeleteExistingConfig = ($deleteConfig -eq 'Y')
                 }
             }
             default {
@@ -669,7 +680,6 @@ if ($installation.Exists -and $installation.IsValid) {
     
     Write-Host "`nNew installation to: $TargetDirectory" -ForegroundColor Green
     
-    # Check admin only if needed for the specific directory
     if ($TargetDirectory -like "*Program Files*") {
         if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator")) {
             Write-Host "`nNote: Installing to Program Files requires Administrator privileges." -ForegroundColor Yellow

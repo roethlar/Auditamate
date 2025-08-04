@@ -1,5 +1,5 @@
-﻿#Requires -Version 5.1
-# No admin rights needed for AD queries
+#Requires -Version 5.1
+#Requires -RunAsAdministrator
 
 <#
 .SYNOPSIS

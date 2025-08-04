@@ -57,23 +57,47 @@ try {
     if ($isFirstRun) {
         & "$PSScriptRoot\Scripts\Setup-AuditTool.ps1" -Mode Install -TargetDirectory $targetDir
     } else {
-        Write-Host "`nExisting installation detected at: $targetDir" -ForegroundColor Yellow
+        Write-Host "`nExisting installation found at: $targetDir" -ForegroundColor Yellow
+        Write-Host "Version: $(if (Test-Path "$targetDir\version.txt") { Get-Content "$targetDir\version.txt" } else { 'Unknown' })" -ForegroundColor Gray
+        
         Write-Host "`nWhat would you like to do?" -ForegroundColor Cyan
-        Write-Host "1. Check prerequisites only"
-        Write-Host "2. Update existing configuration"
-        Write-Host "3. Update scripts and configuration"
-        Write-Host "4. Complete reinstall"
+        Write-Host "1. Update files only" -ForegroundColor White
+        Write-Host "2. Update configuration only" -ForegroundColor White  
+        Write-Host "3. Complete reinstall" -ForegroundColor White
+        Write-Host "4. Exit" -ForegroundColor White
         
         $choice = Read-Host "`nSelect option (1-4)"
         
         switch ($choice) {
-            "1" { & "$PSScriptRoot\Scripts\Setup-AuditTool.ps1" -Mode Check -TargetDirectory $targetDir }
-            "2" { & "$PSScriptRoot\Scripts\Setup-AuditTool.ps1" -Mode UpdateConfig -TargetDirectory $targetDir }
-            "3" { & "$PSScriptRoot\Scripts\Setup-AuditTool.ps1" -Mode Update -TargetDirectory $targetDir }
-            "4" { & "$PSScriptRoot\Scripts\Setup-AuditTool.ps1" -Mode Install -TargetDirectory $targetDir }
+            "1" { 
+                Write-Host "`nUpdating files to new version..." -ForegroundColor Green
+                & "$PSScriptRoot\Scripts\Setup-AuditTool.ps1" -Mode Update -TargetDirectory $targetDir 
+            }
+            "2" {
+                Write-Host "`nUpdating configuration settings..." -ForegroundColor Green
+                & "$PSScriptRoot\Scripts\Setup-AuditTool.ps1" -Mode UpdateConfig -TargetDirectory $targetDir
+            }
+            "3" { 
+                Write-Host "`nComplete reinstall will:" -ForegroundColor Yellow
+                Write-Host "  - Replace all program files" -ForegroundColor White
+                Write-Host "  - Delete logs and reports" -ForegroundColor White
+                Write-Host "  - Optionally delete configurations" -ForegroundColor White
+                
+                $confirm = Read-Host "`nContinue? (Y/N)"
+                if ($confirm -eq 'Y') {
+                    & "$PSScriptRoot\Scripts\Setup-AuditTool.ps1" -Mode Install -TargetDirectory $targetDir
+                } else {
+                    Write-Host "`nCancelled." -ForegroundColor Yellow
+                    exit 0
+                }
+            }
+            "4" { 
+                Write-Host "`nExiting." -ForegroundColor Yellow
+                exit 0
+            }
             default { 
-                Write-Host "Invalid option selected." -ForegroundColor Red
-                exit
+                Write-Host "Invalid option." -ForegroundColor Red
+                exit 1
             }
         }
     }

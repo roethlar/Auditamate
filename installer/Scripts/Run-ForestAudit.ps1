@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Performs comprehensive AD audit across multi-domain forest environment.
 
@@ -287,7 +287,7 @@ try {
             $attachments += $codeDocs.HtmlPath
         }
         
-        Send-ADComplianceReport `
+        $emailResult = Send-ADComplianceReport `
             -Recipients $config.EmailSettings.Recipients `
             -Subject "Multi-Domain Forest AD Audit - $(Get-Date -Format 'MMMM yyyy')" `
             -HtmlReportPath $htmlPath `
@@ -322,7 +322,7 @@ try {
         }
         
         $jobConfig | ConvertTo-Json | Out-File $SaveJob -Encoding UTF8
-        Write-Host "`n*" Job saved to: $SaveJob" -ForegroundColor Green
+        Write-Host "`n* Job saved to: $SaveJob" -ForegroundColor Green
     }
     
     Write-Host "`nAudit Summary:" -ForegroundColor Yellow

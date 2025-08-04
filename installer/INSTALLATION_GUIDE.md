@@ -2,10 +2,11 @@
 
 ## Quick Start
 
-1. Run as Administrator:
+1. Run the installer:
    ```powershell
    .\INSTALL.ps1
    ```
+   Note: Administrator privileges are only required if installing to Program Files
 
 2. Follow the setup wizard prompts
 
@@ -31,6 +32,14 @@ The setup wizard will:
 - Set up email notifications
 - Optionally configure Azure app registration
 - Create user preferences
+
+## Updating an Existing Installation
+
+If you already have the AD Audit Tool installed, the installer will detect it and offer these options:
+
+1. **Update files only** - Replace program files with newer versions, keeping all configurations
+2. **Update configuration only** - Modify settings without changing program files  
+3. **Complete reinstall** - Fresh installation with option to preserve or delete existing configurations
 
 ## Support
 

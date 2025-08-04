@@ -160,8 +160,9 @@ function Get-ADGroupAuditDataMultiDomain {
                     }
                 }
             } else {
-                # Get all groups
-                $domainGroups = Get-ADGroup -Filter * -Server $domain.DomainController -Properties *
+                # No groups specified - skip this domain
+                Write-Warning "No groups specified to audit in domain $($domain.Name)"
+                continue
             }
             
             # Process each group

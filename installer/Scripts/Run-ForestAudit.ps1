@@ -222,11 +222,18 @@ try {
     Write-Host "`nStep 2: Collecting detailed group membership data..." -ForegroundColor Yellow
     Write-Host "Note: Some groups may be skipped if the service account lacks permissions." -ForegroundColor Gray
     
-    # Get groups to audit
-    $groupsToAudit = $config.Groups
-    if ($config.MultiDomainSettings.IncludeForestRootGroups) {
-        $groupsToAudit = $groupsToAudit + @("Enterprise Admins", "Schema Admins") | Select-Object -Unique
+    # Get groups to audit - use the privileged groups we found
+    $groupsToAudit = @()
+    
+    # Add all privileged groups we found
+    foreach ($group in $privilegedGroups) {
+        $groupsToAudit += $group.GroupName
     }
+    
+    # Remove duplicates
+    $groupsToAudit = $groupsToAudit | Select-Object -Unique
+    
+    Write-Host "Will audit these privileged groups: $($groupsToAudit -join ', ')" -ForegroundColor Gray
     
     if ($CaptureCommands) {
         $cmd = "Get-ADGroupAuditDataMultiDomain -GroupNames @('$($groupsToAudit -join "', '")') -Domains @('$($auditDomains -join "', '")') -IncludeForestRootGroups -ResolveForeignSecurityPrincipals"

@@ -221,6 +221,7 @@ try {
     
     # Step 2: Collect group data
     Write-Host "`nStep 2: Collecting detailed group membership data..." -ForegroundColor Yellow
+    Write-Host "Note: Some groups may be skipped if the service account lacks permissions." -ForegroundColor Gray
     
     # Get groups to audit
     $groupsToAudit = $config.Groups
@@ -242,6 +243,16 @@ try {
         -CaptureCommands:$CaptureCommands
     
     Write-Host "Collected data for $($groupData.Count) groups" -ForegroundColor Green
+    
+    # Display any groups with errors
+    $errorGroups = $groupData | Where-Object { $_.Status -like "*Error*" }
+    if ($errorGroups) {
+        Write-Host "`nGroups with access errors ($($errorGroups.Count)):" -ForegroundColor Yellow
+        foreach ($group in $errorGroups) {
+            Write-Host "  - $($group.GroupName) ($($group.Domain)): $($group.ErrorDetails)" -ForegroundColor Gray
+        }
+        Write-Host "Note: These groups will be included in the report with error status." -ForegroundColor Gray
+    }
     
     # Display cross-domain membership summary
     $crossDomainGroups = $groupData | Where-Object { $_.CrossDomainMembers -gt 0 }

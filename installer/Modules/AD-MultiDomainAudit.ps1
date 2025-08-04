@@ -187,12 +187,23 @@ function Get-ADGroupAuditDataMultiDomain {
                 }
                 
                 # Get group members
-                if ($CaptureCommands) {
-                    $cmd = "Get-ADGroupMember -Identity '$($group.DistinguishedName)' -Server '$($domain.DomainController)'$(if ($IncludeNestedGroups) { ' -Recursive' })"
-                    Add-AuditCommand -CommandName "Get-ADGroupMember" -CommandText $cmd -Description "Retrieving members of $($group.Name)" -CaptureScreenshot
+                try {
+                    if ($CaptureCommands) {
+                        $cmd = "Get-ADGroupMember -Identity '$($group.DistinguishedName)' -Server '$($domain.DomainController)'$(if ($IncludeNestedGroups) { ' -Recursive' })"
+                        Add-AuditCommand -CommandName "Get-ADGroupMember" -CommandText $cmd -Description "Retrieving members of $($group.Name)" -CaptureScreenshot
+                    }
+                    
+                    $members = Get-ADGroupMember -Identity $group.DistinguishedName -Server $domain.DomainController -Recursive:$IncludeNestedGroups
+                } catch {
+                    Write-Warning "Unable to retrieve members for group '$($group.Name)' in domain '$($domain.Name)': $_"
+                    Write-Warning "This may be due to insufficient permissions. Skipping this group."
+                    
+                    # Add to results with error status
+                    $groupData.Status = "Error - Access Denied"
+                    $groupData.ErrorDetails = $_.Exception.Message
+                    $results += $groupData
+                    continue
                 }
-                
-                $members = Get-ADGroupMember -Identity $group.DistinguishedName -Server $domain.DomainController -Recursive:$IncludeNestedGroups
                 
                 foreach ($member in $members) {
                     # Handle Foreign Security Principals (cross-domain members)

@@ -113,7 +113,8 @@ param(
 $ErrorActionPreference = 'Stop'
 
 # Import logging module
-. "$PSScriptRoot\Modules\Audit-Logging.ps1"
+$modulePath = Split-Path $PSScriptRoot -Parent
+. "$modulePath\Modules\Audit-Logging.ps1"
 
 # Initialize logging
 Initialize-AuditLog -OutputDirectory $OutputDirectory -LogName "localadmin-audit"
@@ -145,9 +146,9 @@ try {
     
     # Import modules
     Write-AuditLog "Loading audit modules..." "INFO"
-    . "$PSScriptRoot\Modules\LocalAdmin-Audit.ps1"
-    . "$PSScriptRoot\Modules\Send-AuditReport.ps1"
-    . "$PSScriptRoot\Modules\Audit-CodeCapture.ps1"
+    . "$modulePath\Modules\LocalAdmin-Audit.ps1"
+    . "$modulePath\Modules\Send-AuditReport.ps1"
+    . "$modulePath\Modules\Audit-CodeCapture.ps1"
     Write-AuditLog "Modules loaded successfully" "SUCCESS"
     
     # Load configuration
@@ -371,7 +372,7 @@ try {
         Write-AuditLog "`nUploading results to AuditBoard..." "INFO"
         
         try {
-            . "$PSScriptRoot\Modules\AuditBoard-Integration.ps1"
+            . "$modulePath\Modules\AuditBoard-Integration.ps1"
             
             if (Test-Path $AuditBoardConfig) {
                 $abConfig = Get-Content $AuditBoardConfig | ConvertFrom-Json

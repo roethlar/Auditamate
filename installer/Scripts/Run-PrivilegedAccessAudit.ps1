@@ -173,7 +173,8 @@ try {
     $clientSecret = Read-Host -AsSecureString
     
     # Import module and run audit
-    . "$PSScriptRoot\Modules\PrivilegedAccess-UnifiedReport.ps1"
+    $modulePath = Split-Path $PSScriptRoot -Parent
+    . "$modulePath\Modules\PrivilegedAccess-UnifiedReport.ps1"
     
     $reportPath = "$OutputDirectory\Privileged_Access_Report_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
     
@@ -198,7 +199,7 @@ try {
     if ($SendEmail -and $loadedConfig.EmailSettings) {
         Write-Host "`nSending audit report via email..." -ForegroundColor Yellow
         
-        . "$PSScriptRoot\Modules\Send-AuditReport.ps1"
+        . "$modulePath\Modules\Send-AuditReport.ps1"
         
         $emailParams = @{
             Recipients = $loadedConfig.EmailSettings.Recipients

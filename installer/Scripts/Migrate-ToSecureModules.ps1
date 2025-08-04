@@ -152,18 +152,20 @@ foreach ($file in $filesToUpdate.Keys) {
         if ($content -notmatch 'Import-Module.*InputValidation') {
             $moduleImports = @'
 # Import security modules
-$modulePath = Join-Path $PSScriptRoot "Modules"
-Import-Module "$modulePath\InputValidation.psm1" -Force
-Import-Module "$modulePath\SecureCredentialManager.psm1" -Force
-Import-Module "$modulePath\ErrorHandler.psm1" -Force
-Import-Module "$modulePath\ConfigurationManager.psm1" -Force
-Import-Module "$modulePath\StructuredLogging.psm1" -Force
+$modulePath = Split-Path $PSScriptRoot -Parent
+Import-Module "$modulePath\Modules\InputValidation.psm1" -Force
+Import-Module "$modulePath\Modules\SecureCredentialManager.psm1" -Force
+Import-Module "$modulePath\Modules\ErrorHandler.psm1" -Force
+Import-Module "$modulePath\Modules\ConfigurationManager.psm1" -Force
+Import-Module "$modulePath\Modules\StructuredLogging.psm1" -Force
 
 '@
             # Insert after param block
             if ($content -match '(param\s*\([^)]+\))') {
                 $paramBlock = $matches[0]
                 $insertPoint = $content.IndexOf($paramBlock) + $paramBlock.Length
+                # Update module imports to use parent directory
+                $moduleImports = $moduleImports -replace '\$PSScriptRoot "Modules"', '(Split-Path \$PSScriptRoot -Parent) "Modules"'
                 $content = $content.Insert($insertPoint, "`n`n$moduleImports")
             }
         }

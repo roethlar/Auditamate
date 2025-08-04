@@ -135,12 +135,13 @@ try {
         New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
     }
     
-    # Import modules
-    Import-Module "$PSScriptRoot\Modules\AD-AuditModule.psm1" -Force
-    . "$PSScriptRoot\Modules\AD-MultiDomainAudit.ps1"
-    . "$PSScriptRoot\Modules\AD-ReportGenerator.ps1"
-    . "$PSScriptRoot\Modules\Send-AuditReport.ps1"
-    . "$PSScriptRoot\Modules\Audit-CodeCapture.ps1"
+    # Import modules (modules are in parent directory)
+    $modulePath = Split-Path $PSScriptRoot -Parent
+    Import-Module "$modulePath\Modules\AD-AuditModule.psm1" -Force
+    . "$modulePath\Modules\AD-MultiDomainAudit.ps1"
+    . "$modulePath\Modules\AD-ReportGenerator.ps1"
+    . "$modulePath\Modules\Send-AuditReport.ps1"
+    . "$modulePath\Modules\Audit-CodeCapture.ps1"
     
     # Start code capture
     if ($CaptureCommands) {
@@ -361,7 +362,11 @@ try {
     
     # Stop code capture if error occurs
     if ($CaptureCommands) {
-        Stop-AuditCodeCapture | Out-Null
+        try {
+            Stop-AuditCodeCapture | Out-Null
+        } catch {
+            # Ignore if function not available due to module load failure
+        }
     }
     
     Write-Host "`nPress Enter to continue..." -ForegroundColor Gray

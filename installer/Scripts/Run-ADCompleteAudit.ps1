@@ -149,11 +149,12 @@ try {
         }
     }
     
-    Import-Module "$PSScriptRoot\Modules\AD-AuditModule.psm1" -Force
-    . "$PSScriptRoot\Modules\AD-ScreenCapture.ps1"
-    . "$PSScriptRoot\Modules\AD-ReportGenerator.ps1"
-    . "$PSScriptRoot\Modules\Send-AuditReport.ps1"
-    . "$PSScriptRoot\Modules\Audit-CodeCapture.ps1"
+    $modulePath = Split-Path $PSScriptRoot -Parent
+    Import-Module "$modulePath\Modules\AD-AuditModule.psm1" -Force
+    . "$modulePath\Modules\AD-ScreenCapture.ps1"
+    . "$modulePath\Modules\AD-ReportGenerator.ps1"
+    . "$modulePath\Modules\Send-AuditReport.ps1"
+    . "$modulePath\Modules\Audit-CodeCapture.ps1"
     
     $config = @{
         Groups = @()
@@ -298,7 +299,7 @@ try {
         
         try {
             # Load AuditBoard module
-            . "$PSScriptRoot\Modules\AuditBoard-Integration.ps1"
+            . "$modulePath\Modules\AuditBoard-Integration.ps1"
             
             # Load AuditBoard config
             if (Test-Path $AuditBoardConfig) {

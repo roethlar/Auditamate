@@ -30,7 +30,8 @@ Write-Host "===============================================`n" -ForegroundColor 
 
 try {
     # Load AuditBoard module
-    . "$PSScriptRoot\Modules\AuditBoard-Integration.ps1"
+    $modulePath = Split-Path $PSScriptRoot -Parent
+    . "$modulePath\Modules\AuditBoard-Integration.ps1"
     
     # Check if config exists
     if (-not (Test-Path $ConfigFile)) {

@@ -2,6 +2,11 @@
 
 ## Where Logs Are Saved
 
+### Master Session Logs
+- **Location**: `[Installation Directory]\Logs\Sessions\`
+- **Files**: `Session_[timestamp].log`
+- **Contains**: Complete transcript of entire AD Audit Tool session including all menu selections, outputs, and errors
+
 ### Forest Audit Logs
 - **Location**: `[Installation Directory]\Scripts\Output\Forest_[timestamp]\`
 - **Files**:

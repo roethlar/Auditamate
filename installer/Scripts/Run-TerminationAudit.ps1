@@ -62,7 +62,8 @@ Write-Host "Checking terminations from last $DaysBack days`n" -ForegroundColor Y
 
 try {
     # Import required modules
-    . "$PSScriptRoot\Modules\Workday-Integration.ps1"
+    $modulePath = Split-Path $PSScriptRoot -Parent
+    . "$modulePath\Modules\Workday-Integration.ps1"
     
     # Get Workday credentials if not provided
     if (!$WorkdayCredential) {

@@ -25,6 +25,16 @@ param(
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $scriptPath
 
+# Start master session logging
+$sessionLogDir = "$scriptPath\Logs\Sessions"
+if (-not (Test-Path $sessionLogDir)) {
+    New-Item -ItemType Directory -Path $sessionLogDir -Force | Out-Null
+}
+$sessionLog = "$sessionLogDir\Session_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+Start-Transcript -Path $sessionLog -Force
+
+Write-Host "Session log started: $sessionLog" -ForegroundColor Gray
+
 # Display header
 function Show-Header {
     # Never clear the screen - especially important for viewing errors
@@ -39,6 +49,7 @@ function Show-Header {
 if ($QuickAudit) {
     Write-Host "Running quick audit for: $QuickAudit" -ForegroundColor Yellow
     & "$scriptPath\Scripts\Run-ADCompleteAudit.ps1" -Groups $QuickAudit
+    Stop-Transcript | Out-Null
     exit
 }
 
@@ -56,6 +67,7 @@ do {
         Write-Host "`nRun: .\Setup-AuditTool.ps1" -ForegroundColor White
         Write-Host "`nPress Enter to exit..." -ForegroundColor Gray
         Read-Host
+        Stop-Transcript | Out-Null
         exit
     }
     
@@ -168,6 +180,8 @@ do {
         
         "0" {
             Write-Host "`nExiting..." -ForegroundColor Gray
+            Write-Host "Session log saved to: $sessionLog" -ForegroundColor Gray
+            Stop-Transcript | Out-Null
             exit
         }
         

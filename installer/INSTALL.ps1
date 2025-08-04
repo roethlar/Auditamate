@@ -61,7 +61,7 @@ try {
         Write-Host "Version: $(if (Test-Path "$targetDir\version.txt") { Get-Content "$targetDir\version.txt" } else { 'Unknown' })" -ForegroundColor Gray
         
         Write-Host "`nWhat would you like to do?" -ForegroundColor Cyan
-        Write-Host "1. Update files only" -ForegroundColor White
+        Write-Host "1. Update program scripts and modules" -ForegroundColor White
         Write-Host "2. Update configuration only" -ForegroundColor White  
         Write-Host "3. Complete reinstall" -ForegroundColor White
         Write-Host "4. Exit" -ForegroundColor White
@@ -70,7 +70,7 @@ try {
         
         switch ($choice) {
             "1" { 
-                Write-Host "`nUpdating files to new version..." -ForegroundColor Green
+                Write-Host "`nUpdating program scripts and modules to new version..." -ForegroundColor Green
                 & "$PSScriptRoot\Scripts\Setup-AuditTool.ps1" -Mode Update -TargetDirectory $targetDir 
             }
             "2" {

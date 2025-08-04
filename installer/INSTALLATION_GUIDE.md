@@ -37,7 +37,7 @@ The setup wizard will:
 
 If you already have the AD Audit Tool installed, the installer will detect it and offer these options:
 
-1. **Update files only** - Replace program files with newer versions, keeping all configurations
+1. **Update program scripts and modules** - Replace audit scripts and PowerShell modules with newer versions, keeping all configurations
 2. **Update configuration only** - Modify settings without changing program files  
 3. **Complete reinstall** - Fresh installation with option to preserve or delete existing configurations
 

@@ -56,6 +56,23 @@ If an audit fails:
 2. Review the transcript log for complete execution history
 3. Look for "ERROR" or "CRITICAL" entries in the main log file
 
+## Screenshot Capture for Audit Compliance
+
+When command capture is enabled, the tool takes **full-screen screenshots** that include:
+- The PowerShell window showing the command execution
+- The Windows taskbar with system clock (required for timestamp verification)
+- Any other visible windows or desktop content
+
+**Why full-screen screenshots are required:**
+- Regulatory compliance requires non-tamperable timestamp evidence
+- System clock in taskbar provides verifiable proof of when commands were executed
+- Screenshots serve as visual audit trail for compliance reviews
+
+**Privacy Notice:**
+- Close or minimize any sensitive applications before running audits
+- Screenshots are saved only to the audit output directory
+- You will be prompted for consent before any screenshots are taken
+
 ## Important Notes
 
 - **Never use Clear-Host or screen clearing** - This prevents users from seeing errors

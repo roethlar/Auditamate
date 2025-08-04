@@ -68,7 +68,6 @@ $ProgressPreference = 'Continue'
 $script:CurrentUser = $env:USERNAME
 
 function Write-SetupHeader {
-    Clear-Host
     Write-Host "`n===============================================" -ForegroundColor Cyan
     Write-Host "   AD Audit Tool - Enhanced Setup Wizard" -ForegroundColor Cyan
     Write-Host "   Version 2.0" -ForegroundColor Cyan
@@ -745,6 +744,3 @@ if ($Mode -eq "Install") {
     Write-Host "  2. Test with a small audit first" -ForegroundColor Gray
     Write-Host "  3. Check the Logs folder for any issues" -ForegroundColor Gray
 }
-
-Write-Host "`nPress any key to exit..." -ForegroundColor Gray
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")

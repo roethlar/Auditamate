@@ -39,7 +39,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
-    [ValidateSet("Install", "Update", "UpdateConfig", "Check")]
+    [ValidateSet("Install", "Update", "UpdateConfig", "ConfigureForestGroups", "Check")]
     [string]$Mode = "Install",
     
     [Parameter(Mandatory=$false)]
@@ -453,6 +453,126 @@ function Set-GlobalSettings {
     Write-Status "Saved SMTP configuration" "Success"
 }
 
+function Set-ForestGroupConfiguration {
+    param(
+        [string]$ConfigPath
+    )
+    
+    Write-Host "`n=== Forest Audit Group Configuration ===" -ForegroundColor Yellow
+    Write-Host "This will configure which privileged groups to audit in each domain." -ForegroundColor Gray
+    
+    $forestConfigPath = "$ConfigPath\forest-audit-config.json"
+    
+    # Load existing config or create new
+    if (Test-Path $forestConfigPath) {
+        Write-Host "`nExisting forest configuration found." -ForegroundColor Cyan
+        $config = Get-Content $forestConfigPath | ConvertFrom-Json
+        $viewCurrent = Read-Host "View current configuration? (Y/N)"
+        if ($viewCurrent -eq 'Y') {
+            Write-Host "`nCurrent domain group configuration:" -ForegroundColor Gray
+            foreach ($domain in $config.DomainGroups.PSObject.Properties) {
+                if ($domain.Name -ne '_default') {
+                    Write-Host "  $($domain.Name): $($domain.Value -join ', ')" -ForegroundColor White
+                }
+            }
+        }
+    } else {
+        $config = [PSCustomObject]@{
+            Description = "Forest-wide audit configuration"
+            MultiDomainSettings = @{
+                AuditAllDomains = $true
+                IncludeForestRootGroups = $true
+                ResolveForeignSecurityPrincipals = $true
+            }
+            DomainGroups = @{}
+            ExcludeGroups = @("Domain Computers", "Domain Controllers", "Domain Guests", "Domain Users")
+            IncludeNestedGroups = $true
+        }
+    }
+    
+    # Detect domains
+    try {
+        $forest = [System.DirectoryServices.ActiveDirectory.Forest]::GetCurrentForest()
+        $domains = $forest.Domains | Select-Object -ExpandProperty Name
+        
+        Write-Host "`nDetected domains in forest:" -ForegroundColor Cyan
+        foreach ($domain in $domains) {
+            Write-Host "  - $domain" -ForegroundColor White
+        }
+    } catch {
+        Write-Status "Could not enumerate forest domains: $_" "Warning"
+        $domains = @()
+    }
+    
+    # Configure default groups
+    Write-Host "`nDefault privileged groups (apply to all domains unless overridden):" -ForegroundColor Yellow
+    $defaultGroups = if ($config.DomainGroups._default) { 
+        $config.DomainGroups._default -join ', ' 
+    } else { 
+        "Domain Admins, Administrators, Account Operators, Server Operators, Backup Operators" 
+    }
+    
+    $newDefaults = Read-Host "Enter default groups (comma-separated) [$defaultGroups]"
+    if ($newDefaults) {
+        $config.DomainGroups._default = $newDefaults -split ',' | ForEach-Object { $_.Trim() }
+    } elseif (-not $config.DomainGroups._default) {
+        $config.DomainGroups._default = $defaultGroups -split ',' | ForEach-Object { $_.Trim() }
+    }
+    
+    # Configure per-domain groups
+    foreach ($domain in $domains) {
+        Write-Host "`nDomain: $domain" -ForegroundColor Cyan
+        
+        $currentGroups = if ($config.DomainGroups.$domain) {
+            $config.DomainGroups.$domain -join ', '
+        } else {
+            "Use defaults"
+        }
+        
+        Write-Host "Current: $currentGroups" -ForegroundColor Gray
+        $customize = Read-Host "Customize groups for this domain? (Y/N)"
+        
+        if ($customize -eq 'Y') {
+            $isRoot = $forest.RootDomain.Name -eq $domain
+            if ($isRoot) {
+                Write-Host "This is the forest root - include Enterprise/Schema Admins" -ForegroundColor Yellow
+                $suggested = "Enterprise Admins, Schema Admins, Domain Admins, Administrators"
+            } else {
+                $suggested = "Domain Admins, Administrators, Custom-Group-Name"
+            }
+            
+            $domainGroups = Read-Host "Enter groups for $domain [$suggested]"
+            if ($domainGroups) {
+                $config.DomainGroups.$domain = $domainGroups -split ',' | ForEach-Object { $_.Trim() }
+            }
+        }
+    }
+    
+    # Configure exclusions
+    Write-Host "`nGroups to exclude from auditing:" -ForegroundColor Yellow
+    Write-Host "Current: $($config.ExcludeGroups -join ', ')" -ForegroundColor Gray
+    $modifyExclude = Read-Host "Modify exclusions? (Y/N)"
+    if ($modifyExclude -eq 'Y') {
+        $excludes = Read-Host "Enter groups to exclude (comma-separated)"
+        if ($excludes) {
+            $config.ExcludeGroups = $excludes -split ',' | ForEach-Object { $_.Trim() }
+        }
+    }
+    
+    # Save configuration
+    $config | ConvertTo-Json -Depth 10 | Out-File $forestConfigPath -Encoding UTF8
+    Write-Status "Forest audit configuration saved" "Success"
+    
+    # Show summary
+    Write-Host "`nConfiguration Summary:" -ForegroundColor Green
+    Write-Host "  Default groups: $($config.DomainGroups._default -join ', ')" -ForegroundColor White
+    foreach ($domain in $config.DomainGroups.PSObject.Properties) {
+        if ($domain.Name -ne '_default' -and $domain.Name -ne 'PSPath' -and $domain.Name -ne 'PSParentPath') {
+            Write-Host "  $($domain.Name): $($domain.Value -join ', ')" -ForegroundColor White
+        }
+    }
+}
+
 function Set-UserSettings {
     param(
         [string]$ConfigPath,
@@ -720,6 +840,9 @@ if ($Mode -ne "Check") {
     # Skip configuration if just updating files
     if ($Mode -eq "Update") {
         Write-Host "`nSkipping configuration (update mode - files only)" -ForegroundColor Yellow
+    } elseif ($Mode -eq "ConfigureForestGroups") {
+        # Just configure forest groups
+        Set-ForestGroupConfiguration -ConfigPath "$TargetDirectory\Config"
     } else {
         # Configure global settings
         $isUpdate = $Mode -eq "UpdateConfig" -or ($installation.Exists -and $installation.IsValid -and $Mode -ne "Install")

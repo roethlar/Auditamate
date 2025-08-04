@@ -97,12 +97,13 @@ do {
     Write-Host ""
     Write-Host "6. Test Prerequisites" -ForegroundColor Gray
     Write-Host "7. Update Configuration" -ForegroundColor Gray
-    Write-Host "8. View Recent Reports" -ForegroundColor Gray
+    Write-Host "8. Configure Forest Audit Groups" -ForegroundColor Gray
+    Write-Host "9. View Recent Reports" -ForegroundColor Gray
     Write-Host ""
     Write-Host "0. Exit" -ForegroundColor Gray
     Write-Host ""
     
-    $choice = Read-Host "Select option (0-8)"
+    $choice = Read-Host "Select option (0-9)"
     
     switch ($choice) {
         "1" {
@@ -172,6 +173,11 @@ do {
         }
         
         "8" {
+            Write-Host "`nConfiguring forest audit groups..." -ForegroundColor Yellow
+            & "$scriptPath\Setup-AuditTool.ps1" -Mode ConfigureForestGroups
+        }
+        
+        "9" {
             Write-Host "`nOpening reports folder..." -ForegroundColor Yellow
             $reportsPath = try {
                 $us = Get-Content $userConfig | ConvertFrom-Json

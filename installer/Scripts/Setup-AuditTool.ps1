@@ -169,7 +169,7 @@ function Initialize-DirectoryStructure {
     
     # If doing complete reinstall and deleting config
     if (-not $PreserveConfig -and (Test-Path "$TargetPath\Config")) {
-        $backupPath = Backup-ExistingConfig -ConfigPath "$TargetPath\Config"
+        Backup-ExistingConfig -ConfigPath "$TargetPath\Config" | Out-Null
         Write-Status "Removing existing configuration..." "Warning"
         Remove-Item -Path "$TargetPath\Config" -Recurse -Force
     }
@@ -247,7 +247,7 @@ function Copy-ScriptFiles {
     }
 }
 
-function Configure-GlobalSettings {
+function Set-GlobalSettings {
     param(
         [string]$ConfigPath,
         [bool]$IsUpdate = $false
@@ -448,7 +448,7 @@ function Configure-GlobalSettings {
     Write-Status "Saved SMTP configuration" "Success"
 }
 
-function Configure-UserSettings {
+function Set-UserSettings {
     param(
         [string]$ConfigPath,
         [string]$Username = $env:USERNAME,
@@ -714,10 +714,10 @@ if ($Mode -ne "Check") {
     } else {
         # Configure global settings
         $isUpdate = $Mode -eq "UpdateConfig" -or ($installation.Exists -and $installation.IsValid -and $Mode -ne "Install")
-        Configure-GlobalSettings -ConfigPath "$TargetDirectory\Config" -IsUpdate $isUpdate
+        Set-GlobalSettings -ConfigPath "$TargetDirectory\Config" -IsUpdate $isUpdate
         
         # Configure user settings
-        Configure-UserSettings -ConfigPath "$TargetDirectory\Config" -IsUpdate $isUpdate
+        Set-UserSettings -ConfigPath "$TargetDirectory\Config" -IsUpdate $isUpdate
     }
 }
 

@@ -142,11 +142,9 @@ try {
     . "$modulePath\Modules\AD-ReportGenerator.ps1"
     . "$modulePath\Modules\Send-AuditReport.ps1"
     . "$modulePath\Modules\Audit-CodeCapture.ps1"
-    . "$modulePath\Modules\Audit-ScreenshotWarning.ps1"
     
     # Start code capture
     if ($CaptureCommands) {
-        Show-ScreenshotWarning
         Start-AuditCodeCapture -AuditName "Multi-Domain Forest AD Audit" -OutputPath "$OutputDirectory\CodeEvidence"
     }
     

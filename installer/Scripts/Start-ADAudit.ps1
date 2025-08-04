@@ -35,6 +35,13 @@ Start-Transcript -Path $sessionLog -Force
 
 Write-Host "Session log started: $sessionLog" -ForegroundColor Gray
 
+# One-time screenshot notice
+Write-Host "`n=== AUDIT COMPLIANCE NOTICE ===" -ForegroundColor Yellow
+Write-Host "This tool captures full-screen screenshots for audit compliance." -ForegroundColor Cyan
+Write-Host "Screenshots include system timestamps required for regulatory evidence." -ForegroundColor White
+Write-Host "Ensure no sensitive information is visible during audits." -ForegroundColor Red
+Write-Host ""
+
 # Display header
 function Show-Header {
     # Never clear the screen - especially important for viewing errors

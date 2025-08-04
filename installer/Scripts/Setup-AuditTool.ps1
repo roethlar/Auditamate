@@ -607,7 +607,7 @@ function Test-Prerequisites {
 Write-SetupHeader
 
 # Test prerequisites first
-$prereqs = Test-Prerequisites
+Test-Prerequisites
 if ($Mode -eq "Check") {
     Write-Host "`nPrerequisite check complete." -ForegroundColor Green
     exit 0

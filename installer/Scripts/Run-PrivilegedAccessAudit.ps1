@@ -192,7 +192,7 @@ try {
         $auditParams.ExchangeServer = $config.ExchangeServer
     }
     
-    $auditResults = New-UnifiedPrivilegedAccessReport @auditParams
+    New-UnifiedPrivilegedAccessReport @auditParams
     
     # Send email if requested
     if ($SendEmail -and $loadedConfig.EmailSettings) {

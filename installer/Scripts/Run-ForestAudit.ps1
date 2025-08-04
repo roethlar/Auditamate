@@ -287,7 +287,7 @@ try {
             $attachments += $codeDocs.HtmlPath
         }
         
-        $emailResult = Send-ADComplianceReport `
+        Send-ADComplianceReport `
             -Recipients $config.EmailSettings.Recipients `
             -Subject "Multi-Domain Forest AD Audit - $(Get-Date -Format 'MMMM yyyy')" `
             -HtmlReportPath $htmlPath `

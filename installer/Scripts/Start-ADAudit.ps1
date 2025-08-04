@@ -27,7 +27,7 @@ Set-Location $scriptPath
 
 # Display header
 function Show-Header {
-    Clear-Host
+    # Never clear the screen - especially important for viewing errors
     Write-Host "`n===============================================" -ForegroundColor Cyan
     Write-Host "        AD AUDIT TOOL                          " -ForegroundColor Cyan
     Write-Host "     Active Directory Audit Tool               " -ForegroundColor Cyan
@@ -104,6 +104,7 @@ do {
         "2" {
             Write-Host "`n=== Forest-Wide Audit ===" -ForegroundColor Cyan
             Write-Host "This will audit all domains in the forest." -ForegroundColor Gray
+            Write-Host "Logs will be saved to: $scriptPath\Scripts\Output\Forest_[timestamp]" -ForegroundColor Gray
             $confirm = Read-Host "Continue? (Y/N)"
             if ($confirm -eq 'Y') {
                 & "$scriptPath\Scripts\Run-ForestAudit.ps1"

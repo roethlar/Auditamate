@@ -337,13 +337,35 @@ try {
     }
     
 } catch {
-    Write-Host "`nERROR: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "Stack Trace: $($_.ScriptStackTrace)" -ForegroundColor Red
+    $errorMsg = "`nERROR: $($_.Exception.Message)`nStack Trace: $($_.ScriptStackTrace)"
+    
+    # Display error
+    Write-Host $errorMsg -ForegroundColor Red
+    
+    # Log error to file
+    if ($logFile) {
+        Write-AuditLog "CRITICAL ERROR: $($_.Exception.Message)" "ERROR"
+        Write-AuditLog "Stack Trace: $($_.ScriptStackTrace)" "ERROR"
+    }
+    
+    # Save error details
+    if ($OutputDirectory) {
+        $errorFile = "$OutputDirectory\ERROR_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+        $errorMsg | Out-File $errorFile -Encoding UTF8
+        Write-Host "`nError details saved to: $errorFile" -ForegroundColor Yellow
+    }
+    
+    Write-Host "`nLogs are saved in: $OutputDirectory" -ForegroundColor Yellow
+    Write-Host "  - Transcript: forest-audit-transcript.log" -ForegroundColor Gray
+    Write-Host "  - Log file: forest-audit.log" -ForegroundColor Gray
     
     # Stop code capture if error occurs
     if ($CaptureCommands) {
         Stop-AuditCodeCapture | Out-Null
     }
+    
+    Write-Host "`nPress any key to continue..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     
     exit 1
 } finally {

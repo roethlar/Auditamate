@@ -30,26 +30,13 @@ $targetDir = if ($customPath) { $customPath } else { $defaultPath }
 $isFirstRun = -not (Test-Path "$targetDir\Config\global-config.json")
 
 if ($isFirstRun) {
-    Write-Host "First-time installation detected." -ForegroundColor Yellow
-    Write-Host "The setup wizard will:`n" -ForegroundColor Gray
+    Write-Host "`nFirst-time installation detected." -ForegroundColor Yellow
+    Write-Host "The setup wizard will:" -ForegroundColor Gray
     Write-Host "  * Check and install prerequisites" -ForegroundColor White
     Write-Host "  * Create configuration files" -ForegroundColor White
     Write-Host "  * Set up Azure app registration (optional)" -ForegroundColor White
     Write-Host "  * Configure email and audit settings" -ForegroundColor White
-    Write-Host "  * Test the installation`n" -ForegroundColor White
-} else {
-    Write-Host "Existing installation detected." -ForegroundColor Yellow
-    Write-Host "The setup wizard will help you:`n" -ForegroundColor Gray
-    Write-Host "  * Check prerequisites" -ForegroundColor White
-    Write-Host "  * Update configurations" -ForegroundColor White
-    Write-Host "  * Add new integrations`n" -ForegroundColor White
-}
-
-$continue = Read-Host "Continue with setup? (Y/N)"
-
-if ($continue -ne 'Y') {
-    Write-Host "`nSetup cancelled." -ForegroundColor Yellow
-    exit
+    Write-Host "  * Test the installation" -ForegroundColor White
 }
 
 # Run the enhanced setup wizard

@@ -1,0 +1,49 @@
+{
+    "Description": "Forest-wide audit configuration with domain-specific privileged groups",
+    "MultiDomainSettings": {
+        "AuditAllDomains": true,
+        "IncludeForestRootGroups": true,
+        "ResolveForeignSecurityPrincipals": true
+    },
+    "DomainGroups": {
+        "_comment": "Define privileged groups to audit per domain. Use _default for common groups.",
+        "_default": [
+            "Domain Admins",
+            "Administrators",
+            "Account Operators",
+            "Server Operators",
+            "Backup Operators",
+            "Print Operators",
+            "DNSAdmins",
+            "DHCP Administrators"
+        ],
+        "winroot.analog.com": [
+            "Enterprise Admins",
+            "Schema Admins",
+            "Enterprise Key Admins",
+            "Domain Admins",
+            "Administrators"
+        ],
+        "ad.analog.com": [
+            "Domain Admins",
+            "Administrators",
+            "Account Operators",
+            "Server Operators",
+            "Backup Operators",
+            "ADI-IT-SecurityAdmins",
+            "ADI-IT-ExchangeAdmins"
+        ]
+    },
+    "ExcludeGroups": [
+        "Domain Computers",
+        "Domain Controllers",
+        "Domain Guests",
+        "Domain Users"
+    ],
+    "IncludeNestedGroups": true,
+    "EmailSettings": {
+        "Recipients": [],
+        "SmtpServer": "",
+        "UseSSL": false
+    }
+}

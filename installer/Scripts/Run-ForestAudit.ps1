@@ -54,7 +54,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
-    [string]$ConfigFile = "$PSScriptRoot\Config\audit-config.json",
+    [string]$ConfigFile = "$(Split-Path $PSScriptRoot -Parent)\Config\forest-audit-config.json",
     
     [Parameter(Mandatory=$false)]
     [switch]$ForestRootGroups,
@@ -222,18 +222,45 @@ try {
     Write-Host "`nStep 2: Collecting detailed group membership data..." -ForegroundColor Yellow
     Write-Host "Note: Some groups may be skipped if the service account lacks permissions." -ForegroundColor Gray
     
-    # Get groups to audit - use the privileged groups we found
+    # Get groups to audit based on configuration
     $groupsToAudit = @()
     
-    # Add all privileged groups we found
-    foreach ($group in $privilegedGroups) {
-        $groupsToAudit += $group.GroupName
+    if ($config.DomainGroups) {
+        Write-Host "`nUsing domain-specific group configuration..." -ForegroundColor Yellow
+        
+        # Get configured groups for each domain
+        foreach ($domain in $auditDomains) {
+            $domainGroups = @()
+            
+            # Check for domain-specific configuration
+            if ($config.DomainGroups.$domain) {
+                $domainGroups = $config.DomainGroups.$domain
+                Write-Host "  $domain : $($domainGroups -join ', ')" -ForegroundColor Gray
+            }
+            # Use default groups if no specific config
+            elseif ($config.DomainGroups._default) {
+                $domainGroups = $config.DomainGroups._default
+                Write-Host "  $domain : Using default groups" -ForegroundColor Gray
+            }
+            
+            $groupsToAudit += $domainGroups
+        }
+        
+        # Remove duplicates and excluded groups
+        $groupsToAudit = $groupsToAudit | Select-Object -Unique
+        if ($config.ExcludeGroups) {
+            $groupsToAudit = $groupsToAudit | Where-Object { $_ -notin $config.ExcludeGroups }
+        }
+    } else {
+        Write-Host "`nNo domain group configuration found, using discovered privileged groups..." -ForegroundColor Yellow
+        # Fall back to discovered privileged groups
+        foreach ($group in $privilegedGroups) {
+            $groupsToAudit += $group.GroupName
+        }
+        $groupsToAudit = $groupsToAudit | Select-Object -Unique
     }
     
-    # Remove duplicates
-    $groupsToAudit = $groupsToAudit | Select-Object -Unique
-    
-    Write-Host "Will audit these privileged groups: $($groupsToAudit -join ', ')" -ForegroundColor Gray
+    Write-Host "`nWill audit these groups: $($groupsToAudit -join ', ')" -ForegroundColor Cyan
     
     if ($CaptureCommands) {
         $cmd = "Get-ADGroupAuditDataMultiDomain -GroupNames @('$($groupsToAudit -join "', '")') -Domains @('$($auditDomains -join "', '")') -IncludeForestRootGroups -ResolveForeignSecurityPrincipals"

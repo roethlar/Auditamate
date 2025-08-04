@@ -107,6 +107,6 @@ try {
     exit 1
 }
 
-Write-Host "`nPress any key to exit..." -ForegroundColor Gray
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+Write-Host "`nPress Enter to exit..." -ForegroundColor Gray
+Read-Host
 

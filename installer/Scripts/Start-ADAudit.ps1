@@ -54,8 +54,8 @@ do {
     if (-not (Test-Path $globalConfig) -or -not (Test-Path $userConfig)) {
         Write-Host "Configuration not found. Please run setup first." -ForegroundColor Yellow
         Write-Host "`nRun: .\Setup-AuditTool.ps1" -ForegroundColor White
-        Write-Host "`nPress any key to exit..." -ForegroundColor Gray
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        Write-Host "`nPress Enter to exit..." -ForegroundColor Gray
+        Read-Host
         exit
     }
     
@@ -177,8 +177,8 @@ do {
     }
     
     if ($choice -ne "0") {
-        Write-Host "`nPress any key to return to menu..." -ForegroundColor Gray
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        Write-Host "`nPress Enter to return to menu..." -ForegroundColor Gray
+        Read-Host
     }
     
 } while ($true)

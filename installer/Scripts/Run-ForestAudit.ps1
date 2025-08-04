@@ -364,8 +364,8 @@ try {
         Stop-AuditCodeCapture | Out-Null
     }
     
-    Write-Host "`nPress any key to continue..." -ForegroundColor Gray
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    Write-Host "`nPress Enter to continue..." -ForegroundColor Gray
+    Read-Host
     
     exit 1
 } finally {

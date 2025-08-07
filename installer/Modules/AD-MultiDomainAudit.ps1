@@ -79,6 +79,9 @@ function Get-ADGroupAuditDataMultiDomain {
     .PARAMETER ResolveForeignSecurityPrincipals
         Resolve FSPs to show actual user names from trusted domains.
     
+    .PARAMETER OutputDirectory
+        Directory for storing evidence files.
+    
     .EXAMPLE
         Get-ADGroupAuditDataMultiDomain -IncludeForestRootGroups -GroupNames "Domain Admins"
     #>
@@ -100,15 +103,18 @@ function Get-ADGroupAuditDataMultiDomain {
         [switch]$ResolveForeignSecurityPrincipals,
         
         [Parameter(Mandatory=$false)]
-        [switch]$CaptureCommands
+        [string]$OutputDirectory
     )
     
     $results = @()
     
     try {
-        # Import code capture if needed
-        if ($CaptureCommands -and (Test-Path "$PSScriptRoot\Audit-CodeCapture.ps1")) {
-            . "$PSScriptRoot\Audit-CodeCapture.ps1"
+        # Import enhanced capture module
+        if ($OutputDirectory -and (Test-Path "$PSScriptRoot\Audit-EnhancedCapture.ps1")) {
+            . "$PSScriptRoot\Audit-EnhancedCapture.ps1"
+            
+            # Maximize console window at start
+            Set-ConsoleMaximized
         }
         
         # Get all domains if not specified
@@ -148,13 +154,10 @@ function Get-ADGroupAuditDataMultiDomain {
             if ($groupsToAudit) {
                 foreach ($groupName in $groupsToAudit) {
                     try {
-                        if ($CaptureCommands) {
-                            $cmd = "Get-ADGroup -Identity '$groupName' -Server '$($domain.DomainController)' -Properties *"
-                            Add-AuditCommand -CommandName "Get-ADGroup" -CommandText $cmd -Description "Retrieving group from domain: $($domain.Name)" -CaptureScreenshot
-                        }
-                        
+                        Write-Host "`nSearching for group '$groupName' in domain $($domain.Name)..." -ForegroundColor Gray
                         $group = Get-ADGroup -Identity $groupName -Server $domain.DomainController -Properties * -ErrorAction Stop
                         $domainGroups += $group
+                        Write-Host "Found: $($group.DistinguishedName)" -ForegroundColor Green
                     } catch {
                         Write-Verbose "Group '$groupName' not found in domain $($domain.Name)"
                     }
@@ -189,14 +192,27 @@ function Get-ADGroupAuditDataMultiDomain {
                     ErrorDetails = $null
                 }
                 
+                $auditInfo = $null
+                
                 # Get group members
                 try {
-                    if ($CaptureCommands) {
-                        $cmd = "Get-ADGroupMember -Identity '$($group.DistinguishedName)' -Server '$($domain.DomainController)'$(if ($IncludeNestedGroups) { ' -Recursive' })"
-                        Add-AuditCommand -CommandName "Get-ADGroupMember" -CommandText $cmd -Description "Retrieving members of $($group.Name)" -CaptureScreenshot
+                    if ($OutputDirectory) {
+                        # Start clean capture for this group
+                        $captureInfo = Start-GroupAuditCapture -Domain $domain.Name -GroupName $group.Name -OutputDirectory $OutputDirectory
+                        
+                        # Retrieve members with screenshot
+                        $members = Invoke-GroupMemberRetrieval -GroupDN $group.DistinguishedName -Server $domain.DomainController -CaptureInfo $captureInfo -Recursive:$IncludeNestedGroups
+                    } else {
+                        # Simple execution without capture
+                        Write-Host "`nRetrieving members of $($group.Name) from $($domain.Name)..." -ForegroundColor Yellow
+                        $members = Get-ADGroupMember -Identity $group.DistinguishedName -Server $domain.DomainController -Recursive:$IncludeNestedGroups
+                        
+                        if ($members) {
+                            Write-Host "Found $($members.Count) members" -ForegroundColor Green
+                        } else {
+                            Write-Host "No members found" -ForegroundColor Gray
+                        }
                     }
-                    
-                    $members = Get-ADGroupMember -Identity $group.DistinguishedName -Server $domain.DomainController -Recursive:$IncludeNestedGroups
                 } catch {
                     Write-Warning "Unable to retrieve members for group '$($group.Name)' in domain '$($domain.Name)': $_"
                     Write-Warning "This may be due to insufficient permissions. Skipping this group."
@@ -208,6 +224,7 @@ function Get-ADGroupAuditDataMultiDomain {
                     continue
                 }
                 
+                # Process each member
                 foreach ($member in $members) {
                     # Handle Foreign Security Principals (cross-domain members)
                     if ($member.objectClass -eq 'foreignSecurityPrincipal' -and $ResolveForeignSecurityPrincipals) {
@@ -340,6 +357,25 @@ function Get-ADGroupAuditDataMultiDomain {
                 }
                 
                 $groupData.MemberCount = $groupData.Members.Count
+                
+                # Process member details and complete capture
+                if ($OutputDirectory -and $captureInfo -and $members) {
+                    # Get detailed member information with clean capture
+                    if ($members.Count -gt 0) {
+                        $detailedMembers = Get-GroupMemberDetails -Members $members -CaptureInfo $captureInfo -ForestDomains $forestDomains
+                        
+                        # Update group data with detailed member info if we got it
+                        if ($detailedMembers) {
+                            $groupData.Members = $detailedMembers
+                            $groupData.EnabledMemberCount = ($detailedMembers | Where-Object { $_.MemberType -eq 'User' -and $_.Enabled -eq $true }).Count
+                            $groupData.DisabledMemberCount = ($detailedMembers | Where-Object { $_.MemberType -eq 'User' -and $_.Enabled -eq $false }).Count
+                        }
+                    }
+                    
+                    # Complete the group capture
+                    Complete-GroupAuditCapture -CaptureInfo $captureInfo
+                }
+                
                 $results += $groupData
             }
         }

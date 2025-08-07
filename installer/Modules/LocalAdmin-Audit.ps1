@@ -642,5 +642,4 @@ function New-LocalAdminHtmlReport {
     Write-Host "HTML report generated: $OutputPath" -ForegroundColor Green
 }
 
-# Export functions
 # Functions are automatically available when script is dot-sourced

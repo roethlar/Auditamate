@@ -72,5 +72,4 @@ function Stop-AuditLog {
     }
 }
 
-# Export functions
 # Functions are automatically available when script is dot-sourced

@@ -14,7 +14,7 @@ function Start-AuditCodeCapture {
         New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
     }
     
-    $script:AuditCodeCapture = @{
+    $global:AuditCodeCapture = @{
         AuditName = $AuditName
         OutputPath = $OutputPath
         Commands = @()
@@ -26,7 +26,7 @@ function Start-AuditCodeCapture {
     Write-Host "Code capture started for audit: $AuditName" -ForegroundColor Green
     Write-Host "Output path: $OutputPath" -ForegroundColor Cyan
     
-    return $script:AuditCodeCapture
+    return $global:AuditCodeCapture
 }
 
 function Add-AuditCommand {
@@ -48,7 +48,7 @@ function Add-AuditCommand {
         [switch]$CaptureScreenshot
     )
     
-    if (!$script:AuditCodeCapture -or !$script:AuditCodeCapture.IsCapturing) {
+    if (!$global:AuditCodeCapture -or !$global:AuditCodeCapture.IsCapturing) {
         Write-Warning "No active audit code capture session"
         return
     }
@@ -82,14 +82,14 @@ function Add-AuditCommand {
         
         # Take screenshot
         . "$PSScriptRoot\AD-ScreenCapture.ps1"
-        $screenshot = Get-ScreenCapture -OutputPath $script:AuditCodeCapture.OutputPath -FilePrefix "Cmd_$CommandName"
+        $screenshot = Get-ScreenCapture -OutputPath $global:AuditCodeCapture.OutputPath -FilePrefix "Cmd_$CommandName"
         $command.ScreenshotPath = $screenshot.FilePath
-        $script:AuditCodeCapture.Screenshots += $screenshot
+        $global:AuditCodeCapture.Screenshots += $screenshot
         
         Start-Sleep -Seconds 1
     }
     
-    $script:AuditCodeCapture.Commands += $command
+    $global:AuditCodeCapture.Commands += $command
     
     return $command
 }
@@ -98,7 +98,7 @@ function New-AuditCodeDocument {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$false)]
-        [object]$CaptureSession = $script:AuditCodeCapture,
+        [object]$CaptureSession = $global:AuditCodeCapture,
         
         [Parameter(Mandatory=$false)]
         [switch]$IncludeFullCode
@@ -299,9 +299,9 @@ function Stop-AuditCodeCapture {
     [CmdletBinding()]
     param()
     
-    if ($script:AuditCodeCapture) {
-        $script:AuditCodeCapture.IsCapturing = $false
-        Write-Host "Code capture stopped for audit: $($script:AuditCodeCapture.AuditName)" -ForegroundColor Yellow
+    if ($global:AuditCodeCapture) {
+        $global:AuditCodeCapture.IsCapturing = $false
+        Write-Host "Code capture stopped for audit: $($global:AuditCodeCapture.AuditName)" -ForegroundColor Yellow
         
         # Generate final documentation
         $docs = New-AuditCodeDocument

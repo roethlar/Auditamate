@@ -65,12 +65,12 @@
     Requires: Microsoft Graph API permissions (see documentation)
 #>
 
-# No admin rights needed for AD queries
+#Requires -RunAsAdministrator
 
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
-    [string]$ConfigFile = "$PSScriptRoot\Config\privileged-access-config.json",
+    [string]$ConfigFile = "$(Split-Path $PSScriptRoot -Parent)\Config\privileged-access-config.json",
     
     [Parameter(Mandatory=$false)]
     [string]$TenantId,
@@ -97,7 +97,7 @@ param(
     [switch]$SendEmail,
     
     [Parameter(Mandatory=$false)]
-    [string]$OutputDirectory = "$PSScriptRoot\Reports",
+    [string]$OutputDirectory = "$(Split-Path $PSScriptRoot -Parent)\Output\PrivilegedAccess_$(Get-Date -Format 'yyyy-MM-dd_HHmmss')",
     
     [Parameter(Mandatory=$false)]
     [string]$Job,
@@ -172,11 +172,17 @@ try {
     Write-Host "`nEnter Client Secret for App Registration:" -ForegroundColor Yellow
     $clientSecret = Read-Host -AsSecureString
     
-    # Import module and run audit
+    # Import modules
     $modulePath = Split-Path $PSScriptRoot -Parent
     . "$modulePath\Modules\PrivilegedAccess-UnifiedReport.ps1"
+    . "$modulePath\Modules\Audit-StandardOutput.ps1"
     
-    $reportPath = "$OutputDirectory\Privileged_Access_Report_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
+    # Create output directory
+    if (!(Test-Path $OutputDirectory)) {
+        New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
+    }
+    
+    $reportPath = "$OutputDirectory\Privileged_Access_Report.html"
     
     $auditParams = @{
         TenantId = $config.TenantId
@@ -195,6 +201,48 @@ try {
     
     $auditResults = New-UnifiedPrivilegedAccessReport @auditParams
     
+    # Generate CSV reports (primary output)
+    Write-Host "`nGenerating CSV reports..." -ForegroundColor Yellow
+    
+    # No summary CSV needed - data goes directly to role-specific CSVs
+    
+    # Entra ID roles CSV
+    if ($auditResults.EntraIDRoles) {
+        $entraPath = "$OutputDirectory\entra_id_roles.csv"
+        $auditResults.EntraIDRoles | Export-Csv -Path $entraPath -NoTypeInformation
+        Write-Host "Entra ID roles CSV: $entraPath" -ForegroundColor Green
+    }
+    
+    # PIM assignments CSV
+    if ($auditResults.PIMAssignments -and $auditResults.PIMAssignments.Count -gt 0) {
+        $pimPath = "$OutputDirectory\pim_assignments.csv"
+        $auditResults.PIMAssignments | Export-Csv -Path $pimPath -NoTypeInformation
+        Write-Host "PIM assignments CSV: $pimPath" -ForegroundColor Green
+    }
+    
+    # Exchange roles CSV
+    if ($auditResults.ExchangeRoles -and $auditResults.ExchangeRoles.Count -gt 0) {
+        $exchangePath = "$OutputDirectory\exchange_rbac_roles.csv"
+        $auditResults.ExchangeRoles | Export-Csv -Path $exchangePath -NoTypeInformation
+        Write-Host "Exchange RBAC roles CSV: $exchangePath" -ForegroundColor Green
+    }
+    
+    # Conditional Access CSV
+    if ($auditResults.ConditionalAccessPolicies -and $auditResults.ConditionalAccessPolicies.Count -gt 0) {
+        $caPath = "$OutputDirectory\conditional_access_policies.csv"
+        $auditResults.ConditionalAccessPolicies | Export-Csv -Path $caPath -NoTypeInformation
+        Write-Host "Conditional Access policies CSV: $caPath" -ForegroundColor Green
+    }
+    
+    # Audit logs CSV
+    if ($auditResults.AuditLogs -and $auditResults.AuditLogs.Count -gt 0) {
+        $auditLogPath = "$OutputDirectory\role_assignment_history.csv"
+        $auditResults.AuditLogs | Export-Csv -Path $auditLogPath -NoTypeInformation
+        Write-Host "Role assignment history CSV: $auditLogPath" -ForegroundColor Green
+    }
+    
+    Write-Host "HTML report saved: $reportPath" -ForegroundColor Green
+    
     # Send email if requested
     if ($SendEmail -and $loadedConfig.EmailSettings) {
         Write-Host "`nSending audit report via email..." -ForegroundColor Yellow
@@ -207,7 +255,13 @@ try {
             HtmlReportPath = $reportPath
             SmtpServer = $loadedConfig.EmailSettings.SmtpServer
             UseSSL = $loadedConfig.EmailSettings.UseSSL
+            Attachments = @()
         }
+        
+        # Add available CSV files as attachments
+        if (Test-Path "$OutputDirectory\entra_id_roles.csv") { $emailParams.Attachments += "$OutputDirectory\entra_id_roles.csv" }
+        if (Test-Path "$OutputDirectory\pim_assignments.csv") { $emailParams.Attachments += "$OutputDirectory\pim_assignments.csv" }
+        if (Test-Path "$OutputDirectory\exchange_rbac_roles.csv") { $emailParams.Attachments += "$OutputDirectory\exchange_rbac_roles.csv" }
         
         if ($loadedConfig.EmailSettings.From) {
             $emailParams.From = $loadedConfig.EmailSettings.From
@@ -236,9 +290,14 @@ try {
         Write-Host "`n* Job saved to: $SaveJob" -ForegroundColor Green
     }
     
-    Write-Host "`n===============================================" -ForegroundColor Green
-    Write-Host "  Audit Complete!" -ForegroundColor Green
-    Write-Host "===============================================" -ForegroundColor Green
+    # Display summary using standardized output
+    Show-AuditSummary -AuditType "Privileged Access" -OutputDirectory $OutputDirectory
+    
+    # Open output directory
+    $openReport = Read-Host "`nOpen output directory now? (Y/N)"
+    if ($openReport -eq 'Y') {
+        Start-Process $OutputDirectory
+    }
     
 } catch {
     Write-Host "`nERROR: $($_.Exception.Message)" -ForegroundColor Red

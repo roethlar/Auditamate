@@ -355,4 +355,4 @@ function Get-EntraIDConditionalAccessForAdmins {
     }
 }
 
-# Functions are automatically available when script is dot-sourced
+Export-ModuleMember -Function Get-EntraIDAdminRoles, Get-EntraIDPIMRoles, Get-EntraIDRoleAssignmentHistory, Get-RoleCriticalityLevel, Get-EntraIDConditionalAccessForAdmins

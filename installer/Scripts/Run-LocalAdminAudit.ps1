@@ -77,7 +77,7 @@ param(
     [string]$ServerGroup,
     
     [Parameter(Mandatory=$false)]
-    [string]$ConfigFile = "$PSScriptRoot\Config\server-audit-config.json",
+    [string]$ConfigFile = "$(Split-Path $PSScriptRoot -Parent)\Config\server-audit-config.json",
     
     [Parameter(Mandatory=$false)]
     [PSCredential]$Credential,
@@ -101,7 +101,7 @@ param(
     [switch]$UploadToAuditBoard,
     
     [Parameter(Mandatory=$false)]
-    [string]$AuditBoardConfig = "$PSScriptRoot\Config\auditboard-config.json",
+    [string]$AuditBoardConfig = "$(Split-Path $PSScriptRoot -Parent)\Config\auditboard-config.json",
     
     [Parameter(Mandatory=$false)]
     [string]$Job,
@@ -149,6 +149,8 @@ try {
     . "$modulePath\Modules\LocalAdmin-Audit.ps1"
     . "$modulePath\Modules\Send-AuditReport.ps1"
     . "$modulePath\Modules\Audit-CodeCapture.ps1"
+    . "$modulePath\Modules\Audit-OutputCapture.ps1"
+    . "$modulePath\Modules\Audit-StandardOutput.ps1"
     Write-AuditLog "Modules loaded successfully" "SUCCESS"
     
     # Load configuration
@@ -242,7 +244,36 @@ try {
     Write-AuditLog "  - Total administrators found: $($auditData.TotalAdmins)" "INFO"
     Write-AuditLog "  - Compliance issues: $($auditData.ComplianceIssues.Count)" $(if ($auditData.ComplianceIssues.Count -gt 0) { "WARNING" } else { "SUCCESS" })
     
-    # Generate HTML report
+    # Generate CSV reports
+    Write-AuditLog "`nGenerating CSV reports..." "INFO"
+    
+    # Detailed administrator CSV
+    $detailPath = "$OutputDirectory\local_admin_details.csv"
+    $details = @()
+    foreach ($admin in $auditData.Results) {
+        $details += [PSCustomObject]@{
+            Server = $admin.Server
+            AccountName = $admin.Name
+            AccountType = $admin.ObjectClass
+            Source = $admin.PrincipalSource
+            Enabled = $admin.Enabled
+            LastLogon = if ($admin.LastLogon) { $admin.LastLogon.ToString('yyyy-MM-dd HH:mm:ss') } else { 'Never' }
+            PasswordLastSet = if ($admin.PasswordLastSet) { $admin.PasswordLastSet.ToString('yyyy-MM-dd HH:mm:ss') } else { 'N/A' }
+            SID = $admin.SID
+            Description = $admin.Description
+        }
+    }
+    $details | Export-Csv -Path $detailPath -NoTypeInformation
+    Write-AuditLog "Detail CSV created: $detailPath" "SUCCESS"
+    
+    # Compliance issues CSV
+    $issuePath = "$OutputDirectory\compliance_issues.csv"
+    if ($auditData.ComplianceIssues.Count -gt 0) {
+        $auditData.ComplianceIssues | Export-Csv -Path $issuePath -NoTypeInformation
+        Write-AuditLog "Compliance issues CSV created: $issuePath" "WARNING"
+    }
+    
+    # Generate HTML report (nice-to-have for admins)
     Write-AuditLog "`nGenerating HTML report..." "INFO"
     $htmlPath = "$OutputDirectory\LocalAdmin_Audit_Report.html"
     
@@ -258,78 +289,7 @@ try {
     }
     
     New-LocalAdminHtmlReport -AuditData $auditData -OutputPath $htmlPath -CustomMetadata $reportMetadata
-    
-    # Export to Excel
-    Write-AuditLog "Generating Excel report..." "INFO"
-    $excelPath = "$OutputDirectory\LocalAdmin_Audit_$(Get-Date -Format 'yyyyMMdd').xlsx"
-    
-    # Create Excel workbook
-    $excel = New-Object -ComObject Excel.Application
-    $excel.Visible = $false
-    $workbook = $excel.Workbooks.Add()
-    
-    # Summary sheet
-    $summarySheet = $workbook.Worksheets.Item(1)
-    $summarySheet.Name = "Summary"
-    
-    $row = 1
-    $summarySheet.Cells.Item($row, 1) = "Local Administrator Audit Summary"
-    $summarySheet.Cells.Item($row, 1).Font.Bold = $true
-    $summarySheet.Cells.Item($row, 1).Font.Size = 14
-    
-    $row = 3
-    $summarySheet.Cells.Item($row, 1) = "Audit Date:"
-    $summarySheet.Cells.Item($row, 2) = $auditData.AuditDate
-    $row++
-    $summarySheet.Cells.Item($row, 1) = "Servers Audited:"
-    $summarySheet.Cells.Item($row, 2) = $auditData.ServersAudited
-    $row++
-    $summarySheet.Cells.Item($row, 1) = "Successful:"
-    $summarySheet.Cells.Item($row, 2) = $auditData.ServersSuccessful
-    $row++
-    $summarySheet.Cells.Item($row, 1) = "Failed:"
-    $summarySheet.Cells.Item($row, 2) = $auditData.ServersFailed
-    $row++
-    $summarySheet.Cells.Item($row, 1) = "Total Administrators:"
-    $summarySheet.Cells.Item($row, 2) = $auditData.TotalAdmins
-    $row++
-    $summarySheet.Cells.Item($row, 1) = "Compliance Issues:"
-    $summarySheet.Cells.Item($row, 2) = $auditData.ComplianceIssues.Count
-    
-    # Admin details sheet
-    $detailSheet = $workbook.Worksheets.Add()
-    $detailSheet.Name = "Administrator Details"
-    
-    # Headers
-    $headers = @("Server", "Account Name", "Type", "Source", "Enabled", "Last Logon", "Password Last Set")
-    for ($i = 0; $i -lt $headers.Count; $i++) {
-        $detailSheet.Cells.Item(1, $i + 1) = $headers[$i]
-        $detailSheet.Cells.Item(1, $i + 1).Font.Bold = $true
-    }
-    
-    # Data
-    $row = 2
-    foreach ($admin in $auditData.Results | Sort-Object Server, Name) {
-        $detailSheet.Cells.Item($row, 1) = $admin.Server
-        $detailSheet.Cells.Item($row, 2) = $admin.Name
-        $detailSheet.Cells.Item($row, 3) = $admin.ObjectClass
-        $detailSheet.Cells.Item($row, 4) = $admin.PrincipalSource
-        $detailSheet.Cells.Item($row, 5) = if ($admin.Enabled) { "Yes" } else { "No" }
-        $detailSheet.Cells.Item($row, 6) = if ($admin.LastLogon) { $admin.LastLogon.ToString('yyyy-MM-dd') } else { "Never" }
-        $detailSheet.Cells.Item($row, 7) = if ($admin.PasswordLastSet) { $admin.PasswordLastSet.ToString('yyyy-MM-dd') } else { "N/A" }
-        $row++
-    }
-    
-    # Auto-fit columns
-    $detailSheet.UsedRange.EntireColumn.AutoFit() | Out-Null
-    $summarySheet.UsedRange.EntireColumn.AutoFit() | Out-Null
-    
-    # Save and close
-    $workbook.SaveAs($excelPath)
-    $excel.Quit()
-    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
-    
-    Write-AuditLog "Excel report saved: $excelPath" "SUCCESS"
+    Write-AuditLog "HTML report saved: $htmlPath" "SUCCESS"
     
     # Stop code capture
     if ($CaptureCommands) {
@@ -341,7 +301,10 @@ try {
     if ($SendEmail -and $config.EmailAlerts.AlertRecipients.Count -gt 0) {
         Write-AuditLog "Sending email report..." "INFO"
         
-        $attachments = @($excelPath)
+        $attachments = @($detailPath)
+        if (Test-Path $issuePath) {
+            $attachments += $issuePath
+        }
         if ($CaptureCommands -and $codeDocs) {
             $attachments += $codeDocs.HtmlPath
         }
@@ -394,7 +357,10 @@ try {
                 }
                 
                 # Upload files
-                $uploadFiles = @($htmlPath, $excelPath)
+                $uploadFiles = @($summaryPath, $detailPath, $htmlPath)
+                if (Test-Path $issuePath) {
+                    $uploadFiles += $issuePath
+                }
                 if ($CaptureCommands -and $codeDocs) {
                     $uploadFiles += $codeDocs.HtmlPath
                 }
@@ -434,8 +400,11 @@ try {
     Write-AuditLog "Audit Complete!" "SUCCESS"
     Write-AuditLog "===============================================" "SUCCESS"
     Write-AuditLog "Reports saved to: $OutputDirectory" "INFO"
-    Write-AuditLog "  - HTML Report: $(Split-Path $htmlPath -Leaf)" "INFO"
-    Write-AuditLog "  - Excel Report: $(Split-Path $excelPath -Leaf)" "INFO"
+    Write-AuditLog "  - Admin Details: local_admin_details.csv" "INFO"
+    if (Test-Path $issuePath) {
+        Write-AuditLog "  - Compliance Issues: compliance_issues.csv" "WARNING"
+    }
+    Write-AuditLog "  - HTML Report: LocalAdmin_Audit_Report.html" "INFO"
     if ($CaptureCommands -and $codeDocs) {
         Write-AuditLog "  - Command Evidence: $(Split-Path $codeDocs.HtmlPath -Leaf)" "INFO"
     }

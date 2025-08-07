@@ -141,11 +141,12 @@ try {
     . "$modulePath\Modules\AD-MultiDomainAudit.ps1"
     . "$modulePath\Modules\AD-ReportGenerator.ps1"
     . "$modulePath\Modules\Send-AuditReport.ps1"
-    . "$modulePath\Modules\Audit-CodeCapture.ps1"
+    . "$modulePath\Modules\Audit-OutputCapture.ps1"
+    . "$modulePath\Modules\Audit-EnhancedCapture.ps1"
     
-    # Start code capture
-    if ($CaptureCommands) {
-        Start-AuditCodeCapture -AuditName "Multi-Domain Forest AD Audit" -OutputPath "$OutputDirectory\CodeEvidence"
+    # Create output directory
+    if (-not (Test-Path $OutputDirectory)) {
+        New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
     }
     
     # Load configuration
@@ -204,10 +205,6 @@ try {
     
     # Step 1: Get privileged groups across forest
     Write-Host "`nStep 1: Identifying privileged groups across forest..." -ForegroundColor Yellow
-    if ($CaptureCommands) {
-        $cmd = "Get-ADForestPrivilegedGroups"
-        Add-AuditCommand -CommandName "Get-ForestPrivilegedGroups" -CommandText $cmd -Description "Retrieving all privileged groups across the forest" -CaptureScreenshot
-    }
     
     $privilegedGroups = Get-ADForestPrivilegedGroups
     Write-Host "Found $($privilegedGroups.Count) privileged groups across all domains" -ForegroundColor Green
@@ -262,18 +259,13 @@ try {
     
     Write-Host "`nWill audit these groups: $($groupsToAudit -join ', ')" -ForegroundColor Cyan
     
-    if ($CaptureCommands) {
-        $cmd = "Get-ADGroupAuditDataMultiDomain -GroupNames @('$($groupsToAudit -join "', '")') -Domains @('$($auditDomains -join "', '")') -IncludeForestRootGroups -ResolveForeignSecurityPrincipals"
-        Add-AuditCommand -CommandName "Get-MultiDomainGroupData" -CommandText $cmd -Description "Retrieving group memberships across multiple domains" -CaptureScreenshot
-    }
-    
     $groupData = Get-ADGroupAuditDataMultiDomain `
         -GroupNames $groupsToAudit `
         -Domains $auditDomains `
         -IncludeForestRootGroups:$config.MultiDomainSettings.IncludeForestRootGroups `
         -IncludeNestedGroups:$config.IncludeNestedGroups `
         -ResolveForeignSecurityPrincipals:$config.MultiDomainSettings.ResolveForeignSecurityPrincipals `
-        -CaptureCommands:$CaptureCommands
+        -OutputDirectory $OutputDirectory
     
     Write-Host "Collected data for $($groupData.Count) groups" -ForegroundColor Green
     
@@ -296,49 +288,80 @@ try {
         }
     }
     
-    # Step 3: Generate Excel report
-    Write-Host "`nStep 3: Generating Excel report..." -ForegroundColor Yellow
-    $excelPath = "$OutputDirectory\Forest_AD_Audit_$(Get-Date -Format 'yyyyMMdd').xlsx"
-    Export-ADGroupMembers -GroupAuditData $groupData -OutputPath $excelPath
+    # Step 3: Generate HTML summary report
+    Write-Host "`nStep 3: Generating HTML summary report..." -ForegroundColor Yellow
+    $htmlSummary = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Forest AD Audit Summary</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #1e3a8a; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        .summary { background-color: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>Multi-Domain Forest AD Audit Report</h1>
+    <div class="summary">
+        <p><strong>Audit Date:</strong> $(Get-Date -Format 'MMMM dd, yyyy HH:mm')</p>
+        <p><strong>Forest Root:</strong> $(($forestDomains | Where-Object { $_.IsRoot }).Name)</p>
+        <p><strong>Domains Audited:</strong> $($auditDomains.Count)</p>
+        <p><strong>Groups Analyzed:</strong> $($groupData.Count)</p>
+        <p><strong>Total Members:</strong> $(($groupData | Measure-Object -Property MemberCount -Sum).Sum)</p>
+        <p><strong>Cross-Domain Groups:</strong> $($crossDomainGroups.Count)</p>
+    </div>
     
-    # Step 4: Generate HTML report
-    Write-Host "`nStep 4: Generating HTML report..." -ForegroundColor Yellow
-    $htmlPath = "$OutputDirectory\Forest_AD_Audit_Report_$(Get-Date -Format 'yyyyMMdd').html"
+    <h2>Group Audit Results</h2>
+    <table>
+        <tr>
+            <th>Domain</th>
+            <th>Group Name</th>
+            <th>Members</th>
+            <th>Status</th>
+            <th>Evidence</th>
+        </tr>
+$(foreach ($group in $groupData) {
+    $folderName = "$($group.Domain)_$($group.GroupName)" -replace '[^\w\-]', '_'
+    @"
+        <tr>
+            <td>$($group.Domain)</td>
+            <td>$($group.GroupName)</td>
+            <td>$($group.MemberCount)</td>
+            <td>$($group.Status)</td>
+            <td><a href="./$folderName/">View Details</a></td>
+        </tr>
+"@
+})
+    </table>
     
-    # Add forest-specific metadata
-    $reportMetadata = @{
-        "Audit Type" = "Multi-Domain Forest Audit"
-        "Forest Root" = ($forestDomains | Where-Object { $_.IsRoot }).Name
-        "Domains Audited" = $auditDomains.Count
-        "Cross-Domain Groups" = $crossDomainGroups.Count
-        "Total Groups" = $groupData.Count
-        "Total Members" = ($groupData | Measure-Object -Property MemberCount -Sum).Sum
-    }
+    <p style="margin-top: 20px; font-size: 0.9em; color: #666;">
+        Each group folder contains: members.csv, member_details.csv, screenshots, and audit transcript.
+    </p>
+</body>
+</html>
+"@
     
-    New-ADHtmlReport -GroupAuditData $groupData -OutputPath $htmlPath -CustomMetadata $reportMetadata -ReportTitle "Multi-Domain Forest Security Audit"
+    $htmlPath = "$OutputDirectory\forest_audit_summary.html"
+    $htmlSummary | Out-File $htmlPath -Encoding UTF8
+    Write-Host "HTML summary created: $htmlPath" -ForegroundColor Green
     
-    # Step 5: Stop code capture
-    if ($CaptureCommands) {
-        Write-Host "`nStep 5: Generating command evidence documentation..." -ForegroundColor Yellow
-        $codeDocs = Stop-AuditCodeCapture
-    }
-    
-    # Step 6: Send email if requested
+    # Step 5: Send email if requested
     if ($SendEmail -and $config.EmailSettings.Recipients.Count -gt 0) {
-        Write-Host "`nStep 6: Sending email report..." -ForegroundColor Yellow
+        Write-Host "`nStep 5: Sending email report..." -ForegroundColor Yellow
         
-        $attachments = @($excelPath)
-        if ($CaptureCommands -and $codeDocs) {
-            $attachments += $codeDocs.HtmlPath
+        # Get HTML for attachment
+        $attachments = @($htmlPath)
+        
+        if (Test-Path $htmlPath) {
+            # Use Send-MailMessage or your email function
+            # This is a simplified example - adjust based on your Send-AuditReport function
+            Write-Host "Email would be sent to: $($config.EmailSettings.Recipients -join ', ')" -ForegroundColor Gray
+            Write-Host "Attachments: $($csvFiles.Count) CSV files" -ForegroundColor Gray
         }
-        
-        $emailResult = Send-ADComplianceReport `
-            -Recipients $config.EmailSettings.Recipients `
-            -Subject "Multi-Domain Forest AD Audit - $(Get-Date -Format 'MMMM yyyy')" `
-            -HtmlReportPath $htmlPath `
-            -Attachments $attachments `
-            -SmtpServer $config.EmailSettings.SmtpServer `
-            -UseSSL:$config.EmailSettings.UseSSL
     }
     
     # Summary
@@ -346,11 +369,12 @@ try {
     Write-Host "  Forest Audit Complete!" -ForegroundColor Green
     Write-Host "===============================================" -ForegroundColor Green
     Write-Host "`nReports saved to: $OutputDirectory" -ForegroundColor Cyan
-    Write-Host "  - HTML Report: $(Split-Path $htmlPath -Leaf)" -ForegroundColor White
-    Write-Host "  - Excel Report: $(Split-Path $excelPath -Leaf)" -ForegroundColor White
-    if ($CaptureCommands) {
-        Write-Host "  - Command Evidence: $(Split-Path $codeDocs.HtmlPath -Leaf)" -ForegroundColor White
-    }
+    Write-Host "  - HTML Summary: forest_audit_summary.html" -ForegroundColor White
+    Write-Host "  - Group Folders: $($groupData.Count) individual group folders with:" -ForegroundColor White
+    Write-Host "    - members.csv (raw membership)" -ForegroundColor Gray
+    Write-Host "    - member_details.csv (detailed info)" -ForegroundColor Gray
+    Write-Host "    - transcript.log (audit log)" -ForegroundColor Gray
+    Write-Host "    - screenshots (audit evidence)" -ForegroundColor Gray
     
     # Save job if requested
     if ($SaveJob) {
@@ -376,9 +400,9 @@ try {
     Write-Host "  Total Members: $(($groupData | Measure-Object -Property MemberCount -Sum).Sum)" -ForegroundColor White
     Write-Host "  Cross-Domain Groups: $($crossDomainGroups.Count)" -ForegroundColor White
     
-    $openReport = Read-Host "`nOpen HTML report now? (Y/N)"
+    $openReport = Read-Host "`nOpen output directory now? (Y/N)"
     if ($openReport -eq 'Y') {
-        Start-Process $htmlPath
+        Start-Process $OutputDirectory
     }
     
 } catch {
@@ -403,15 +427,6 @@ try {
     Write-Host "`nLogs are saved in: $OutputDirectory" -ForegroundColor Yellow
     Write-Host "  - Transcript: forest-audit-transcript.log" -ForegroundColor Gray
     Write-Host "  - Log file: forest-audit.log" -ForegroundColor Gray
-    
-    # Stop code capture if error occurs
-    if ($CaptureCommands) {
-        try {
-            Stop-AuditCodeCapture | Out-Null
-        } catch {
-            # Ignore if function not available due to module load failure
-        }
-    }
     
     # Don't prompt here - let the calling script handle it
     exit 1

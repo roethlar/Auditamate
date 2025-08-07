@@ -151,7 +151,7 @@ function New-ADHtmlReport {
                 </div>
                 <div class="stat-card">
                     <p>Total Unique Users</p>
-                    <h3>$($GroupAuditData.Members | Select-Object -ExpandProperty SamAccountName -Unique | Measure-Object).Count)</h3>
+                    <h3>$(($GroupAuditData.Members | Select-Object -ExpandProperty SamAccountName -Unique | Measure-Object).Count)</h3>
                 </div>
                 <div class="stat-card">
                     <p>Enabled Users</p>
@@ -418,4 +418,4 @@ function New-ADHtmlReport {
     }
 }
 
-# Functions are automatically available when script is dot-sourced
+# Function is automatically available when script is dot-sourced

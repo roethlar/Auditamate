@@ -4,8 +4,8 @@
 
 .DESCRIPTION
     This script automates the auditing of Active Directory security groups, collecting membership data,
-    user status, and generating detailed reports in HTML and Excel formats. It supports screenshot
-    capture and email delivery of audit results.
+    user status, and generating detailed reports in CSV (primary), HTML and Excel formats. It supports 
+    screenshot capture and email delivery of audit results.
 
 .PARAMETER ConfigFile
     Path to JSON configuration file containing audit settings. Default: .\audit-config.json
@@ -59,17 +59,17 @@
 
 .NOTES
     Author: IT Security Team
-    Version: 1.0
+    Version: 2.0
     Requires: Domain Admin or delegated AD read permissions
 #>
 
-#Requires -RunAsAdministrator
+# No admin rights needed for AD queries
 #Requires -Modules ActiveDirectory
 
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
-    [string]$ConfigFile = "$PSScriptRoot\Config\audit-config.json",
+    [string]$ConfigFile = "$(Split-Path $PSScriptRoot -Parent)\Config\audit-config.json",
     
     [Parameter(Mandatory=$false)]
     [string[]]$Groups,
@@ -81,7 +81,7 @@ param(
     [switch]$CaptureScreenshots,
     
     [Parameter(Mandatory=$false)]
-    [string]$OutputDirectory = "$(Split-Path $PSScriptRoot -Parent)\Output\$(Get-Date -Format 'yyyy-MM-dd_HHmmss')",
+    [string]$OutputDirectory = "$(Split-Path $PSScriptRoot -Parent)\Output\ADGroups_$(Get-Date -Format 'yyyy-MM-dd_HHmmss')",
     
     [Parameter(Mandatory=$false)]
     [string]$Job,
@@ -96,10 +96,34 @@ param(
     [switch]$UploadToAuditBoard,
     
     [Parameter(Mandatory=$false)]
-    [string]$AuditBoardConfig = "$PSScriptRoot\Config\auditboard-config.json"
+    [string]$AuditBoardConfig = "$(Split-Path $PSScriptRoot -Parent)\Config\auditboard-config.json"
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Create output directory early
+if (!(Test-Path $OutputDirectory)) {
+    New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
+}
+
+# Create log file
+$logFile = "$OutputDirectory\audit.log"
+$transcript = "$OutputDirectory\audit-transcript.log"
+Start-Transcript -Path $transcript -Force
+
+function Write-AuditLog {
+    param([string]$Message, [string]$Level = "INFO")
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logEntry = "[$timestamp] [$Level] $Message"
+    Add-Content -Path $logFile -Value $logEntry
+    
+    switch ($Level) {
+        "ERROR" { Write-Host $Message -ForegroundColor Red }
+        "WARNING" { Write-Host $Message -ForegroundColor Yellow }
+        "SUCCESS" { Write-Host $Message -ForegroundColor Green }
+        default { Write-Host $Message -ForegroundColor White }
+    }
+}
 
 Write-AuditLog "`n===============================================" "INFO"
 Write-AuditLog "  Active Directory SOX Compliance Audit Tool" "INFO"
@@ -126,35 +150,15 @@ try {
         }
     }
     
-    if (!(Test-Path $OutputDirectory)) {
-        New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
-    }
-    
-    # Create log file
-    $logFile = "$OutputDirectory\audit.log"
-    $transcript = "$OutputDirectory\audit-transcript.log"
-    Start-Transcript -Path $transcript -Force
-    
-    function Write-AuditLog {
-        param([string]$Message, [string]$Level = "INFO")
-        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        $logEntry = "[$timestamp] [$Level] $Message"
-        Add-Content -Path $logFile -Value $logEntry
-        
-        switch ($Level) {
-            "ERROR" { Write-Host $Message -ForegroundColor Red }
-            "WARNING" { Write-Host $Message -ForegroundColor Yellow }
-            "SUCCESS" { Write-Host $Message -ForegroundColor Green }
-            default { Write-Host $Message -ForegroundColor White }
-        }
-    }
-    
+    # Import modules (modules are in parent directory)
     $modulePath = Split-Path $PSScriptRoot -Parent
     Import-Module "$modulePath\Modules\AD-AuditModule.psm1" -Force
     . "$modulePath\Modules\AD-ScreenCapture.ps1"
     . "$modulePath\Modules\AD-ReportGenerator.ps1"
     . "$modulePath\Modules\Send-AuditReport.ps1"
     . "$modulePath\Modules\Audit-CodeCapture.ps1"
+    . "$modulePath\Modules\Audit-StandardOutput.ps1"
+    . "$modulePath\Modules\Audit-OutputCapture.ps1"
     
     $config = @{
         Groups = @()
@@ -175,6 +179,7 @@ try {
         }
     }
     
+    # Get list of groups to audit
     if ($Groups) {
         $auditGroups = $Groups
     } elseif ($config.Groups.Count -gt 0) {
@@ -187,6 +192,10 @@ try {
     
     Write-AuditLog "`nStarting audit for groups: $($auditGroups -join ', ')" "INFO"
     
+    # Initialize standardized output structure
+    $outputPaths = Initialize-AuditOutput -OutputDirectory $OutputDirectory -AuditType "ADGroups"
+    Start-AuditOutputCapture -OutputDirectory $OutputDirectory
+    
     # Start command evidence capture
     if ($CaptureCommands) {
         Write-AuditLog "Starting command evidence capture..." "INFO"
@@ -194,7 +203,63 @@ try {
     }
     
     Write-AuditLog "`nStep 1: Collecting AD group data..." "INFO"
-    $groupData = Get-ADGroupAuditData -GroupNames $auditGroups -IncludeNestedGroups:$config.IncludeNestedGroups -IncludeDisabledUsers:$config.IncludeDisabledUsers -CaptureCommands:$CaptureCommands
+    
+    # Add domain information to group data
+    $currentDomain = Get-ADDomain
+    $forestRoot = Get-ADForest
+    $isForestRoot = $currentDomain.Name -eq $forestRoot.RootDomain
+    
+    # Define forest-level groups that only exist in root domain
+    $forestLevelGroups = @('Enterprise Admins', 'Schema Admins', 'Enterprise Key Admins')
+    
+    $groupData = @()
+    
+    foreach ($groupName in $auditGroups) {
+        # Skip forest-level groups if not in root domain
+        if (-not $isForestRoot -and $groupName -in $forestLevelGroups) {
+            Write-AuditLog "  Skipping $groupName (only exists in forest root domain)" "WARNING"
+            continue
+        }
+        
+        Write-AuditLog "  Processing: $groupName" "INFO"
+        
+        try {
+            # Temporarily disable code capture to avoid warnings
+            $originalCaptureState = $global:AuditCodeCapture
+            if ($CaptureCommands -and $originalCaptureState) {
+                $global:AuditCodeCapture.IsCapturing = $false
+            }
+            
+            $data = Get-ADGroupAuditData -GroupNames @($groupName) -IncludeNestedGroups:$config.IncludeNestedGroups -IncludeDisabledUsers:$config.IncludeDisabledUsers -CaptureCommands:$false
+            
+            # Re-enable code capture
+            if ($CaptureCommands -and $originalCaptureState) {
+                $global:AuditCodeCapture.IsCapturing = $true
+                
+                # Manually add the audit command
+                $cmd = "Get-ADGroupAuditData -GroupNames @('$groupName') -IncludeNestedGroups:`$$($config.IncludeNestedGroups) -IncludeDisabledUsers:`$$($config.IncludeDisabledUsers)"
+                Add-AuditCommand -CommandName "Get-ADGroupAuditData" -CommandText $cmd -Description "Auditing group: $groupName"
+            }
+        } catch {
+            Write-AuditLog "  ERROR: Failed to audit $groupName - $_" "ERROR"
+            continue
+        }
+        
+        # Add domain property if missing
+        foreach ($group in $data) {
+            if (-not $group.PSObject.Properties["Domain"]) {
+                $group | Add-Member -NotePropertyName "Domain" -NotePropertyValue $currentDomain.Name
+            }
+            if (-not $group.PSObject.Properties["Status"]) {
+                $group | Add-Member -NotePropertyName "Status" -NotePropertyValue "Success"
+            }
+            if (-not $group.PSObject.Properties["ErrorDetails"]) {
+                $group | Add-Member -NotePropertyName "ErrorDetails" -NotePropertyValue $null
+            }
+        }
+        
+        $groupData += $data
+    }
     
     Write-AuditLog "Found $($groupData.Count) groups with $(($groupData | Measure-Object -Property MemberCount -Sum).Sum) total members" "SUCCESS"
     
@@ -205,7 +270,26 @@ try {
         $screenshots = Start-InteractiveADScreenCapture -SessionName "SOX_Audit" -OutputPath "$OutputDirectory\Screenshots"
     }
     
-    Write-AuditLog "`nStep 3: Generating Excel report..." "INFO"
+    # Step 3: Generate CSV reports (primary format)
+    Write-AuditLog "`nStep 3: Generating CSV reports (primary format)..." "INFO"
+    Export-StandardAuditCSV -AuditData $groupData -OutputPaths $outputPaths -DataType "Groups"
+    
+    # Also export individual group CSVs with evidence
+    foreach ($group in $groupData) {
+        $groupIdentifier = "$($group.Domain)_$($group.GroupName)" -replace '[^\w\-]', '_'
+        
+        # Create evidence folder
+        $evidenceFolder = New-AuditEvidenceFolder -ItemIdentifier $groupIdentifier -OutputPaths $outputPaths
+        
+        # Export group members to CSV
+        if ($group.Members.Count -gt 0) {
+            $csvPath = Export-AuditItemCSV -ItemData $group -ItemIdentifier $groupIdentifier -OutputPaths $outputPaths
+            Write-AuditLog "  Exported: $groupIdentifier ($($group.Members.Count) members)" "INFO"
+        }
+    }
+    
+    # Step 4: Generate Excel report (legacy format)
+    Write-AuditLog "`nStep 4: Generating Excel report (legacy format)..." "INFO"
     $excelPath = "$OutputDirectory\AD_Audit_$(Get-Date -Format 'yyyyMMdd').xlsx"
     
     if ($CaptureCommands) {
@@ -215,8 +299,9 @@ try {
     
     Export-ADGroupMembers -GroupAuditData $groupData -OutputPath $excelPath
     
-    Write-AuditLog "`nStep 4: Generating HTML report..." "INFO"
-    $htmlPath = "$OutputDirectory\AD_Audit_Report_$(Get-Date -Format 'yyyyMMdd').html"
+    # Step 5: Generate HTML report (admin view)
+    Write-AuditLog "`nStep 5: Generating HTML report (admin view)..." "INFO"
+    $htmlPath = "$($outputPaths.HTMLDirectory)\AD_Audit_Report_$(Get-Date -Format 'yyyyMMdd').html"
     $reportMetadata = @{
         "Audit Type" = "SOX Compliance"
         "Auditor" = $env:USERNAME
@@ -239,7 +324,13 @@ try {
     if ($SendEmail -and $config.EmailSettings.Recipients.Count -gt 0) {
         Write-AuditLog "Sending email report..." "INFO"
         
-        $attachments = @($excelPath)
+        # Include CSV files as primary attachments
+        $csvFiles = Get-ChildItem -Path $outputPaths.CSVDirectory -Filter "00_*.csv"
+        $attachments = @($csvFiles.FullName)
+        
+        # Also include Excel for compatibility
+        $attachments += $excelPath
+        
         if ($screenshots) {
             $screenshotZip = "$OutputDirectory\Screenshots.zip"
             Compress-Archive -Path "$OutputDirectory\Screenshots\*" -DestinationPath $screenshotZip -Force
@@ -283,8 +374,12 @@ try {
     Write-AuditLog "`n===============================================" "SUCCESS"
     Write-AuditLog "  Audit Complete!" "SUCCESS"
     Write-AuditLog "===============================================" "SUCCESS"
-    Write-AuditLog "Reports saved to: $OutputDirectory" "INFO"
-    Write-AuditLog "  - HTML Report: $(Split-Path $htmlPath -Leaf)" "INFO"
+    
+    # Show standardized output summary
+    Complete-AuditOutput -OutputPaths $outputPaths -HTMLReportPath $htmlPath
+    
+    # Also show legacy formats
+    Write-AuditLog "`nLegacy Formats:" "INFO"
     Write-AuditLog "  - Excel Report: $(Split-Path $excelPath -Leaf)" "INFO"
     if ($screenshots) {
         Write-AuditLog "  - Screenshots: $($screenshots.Count) captured" "INFO"
@@ -324,8 +419,10 @@ try {
                     ComplianceIssues = 0
                 }
                 
-                # Determine files to upload
-                $uploadFiles = @($htmlPath, $excelPath)
+                # Determine files to upload - include CSV files
+                $uploadFiles = @()
+                $uploadFiles += (Get-ChildItem -Path $outputPaths.CSVDirectory -Filter "00_*.csv").FullName
+                $uploadFiles += @($htmlPath, $excelPath)
                 if ($CaptureCommands -and $codeDocs) {
                     $uploadFiles += $codeDocs.HtmlPath
                 }
@@ -346,12 +443,9 @@ try {
     
     Write-AuditLog "Audit log saved to: $logFile" "INFO"
     
-    $openReport = Read-Host "`nOpen HTML report now? (Y/N)"
+    $openReport = Read-Host "`nOpen output directory? (Y/N)"
     if ($openReport -eq 'Y') {
-        Start-Process $htmlPath
-        if ($CaptureCommands -and $codeDocs) {
-            Start-Process $codeDocs.HtmlPath
-        }
+        Start-Process $OutputDirectory
     }
     
 } catch {
@@ -360,7 +454,11 @@ try {
     
     # Stop code capture if error occurs
     if ($CaptureCommands) {
-        Stop-AuditCodeCapture | Out-Null
+        try {
+            Stop-AuditCodeCapture | Out-Null
+        } catch {
+            # Ignore errors during cleanup
+        }
     }
     
     exit 1

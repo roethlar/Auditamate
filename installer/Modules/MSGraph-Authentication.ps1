@@ -211,4 +211,4 @@ function Get-MSGraphBatchRequest {
     return $results
 }
 
-# Functions are automatically available when script is dot-sourced
+Export-ModuleMember -Function Connect-MSGraphWithCertificate, Connect-MSGraphWithSecret, Invoke-MSGraphRequest, Get-MSGraphBatchRequest

@@ -434,4 +434,4 @@ function Compare-ExchangeRBACCompliance {
     }
 }
 
-# Functions are automatically available when script is dot-sourced
+Export-ModuleMember -Function Get-ExchangeOnlineRBACRoles, Get-Exchange2019OnPremRBACRoles, Get-ExchangeRoleCriticalityLevel, Get-ExchangeAdminAuditLog, Compare-ExchangeRBACCompliance

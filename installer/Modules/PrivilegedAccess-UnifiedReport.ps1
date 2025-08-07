@@ -728,4 +728,4 @@ function New-PrivilegedAccessHTMLReport {
     return $OutputPath
 }
 
-# Functions are automatically available when script is dot-sourced
+# Function is automatically available when script is dot-sourced

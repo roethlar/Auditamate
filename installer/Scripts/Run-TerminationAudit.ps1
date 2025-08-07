@@ -54,7 +54,7 @@ param(
     [switch]$CheckAzureAD,
     
     [Parameter(Mandatory=$false)]
-    [string]$OutputPath = "$(Split-Path $PSScriptRoot -Parent)\Output\Termination_Audit_$(Get-Date -Format 'yyyyMMdd_HHmmss')\Termination_Audit.html"
+    [string]$OutputDirectory = "$(Split-Path $PSScriptRoot -Parent)\Output\Termination_Audit_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
 )
 
 Write-Host "`n=== User Termination Compliance Audit ===" -ForegroundColor Cyan
@@ -64,6 +64,7 @@ try {
     # Import required modules
     $modulePath = Split-Path $PSScriptRoot -Parent
     . "$modulePath\Modules\Workday-Integration.ps1"
+    . "$modulePath\Modules\Audit-StandardOutput.ps1"
     
     # Get Workday credentials if not provided
     if (!$WorkdayCredential) {
@@ -107,24 +108,40 @@ try {
         }
     }
     
-    # Step 3: Generate report
-    Write-Host "`nGenerating compliance report..." -ForegroundColor Yellow
-    $reportDir = Split-Path $OutputPath -Parent
-    if (!(Test-Path $reportDir)) {
-        New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
+    # Step 3: Generate reports
+    Write-Host "`nGenerating compliance reports..." -ForegroundColor Yellow
+    
+    # Create output directory
+    if (!(Test-Path $OutputDirectory)) {
+        New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
     }
     
-    New-TerminationComplianceReport -ComplianceResults $complianceResults -OutputPath $OutputPath
+    # Detailed compliance results CSV
+    $detailPath = "$OutputDirectory\termination_compliance_details.csv"
+    $complianceResults | Export-Csv -Path $detailPath -NoTypeInformation
+    Write-Host "Detailed CSV saved: $detailPath" -ForegroundColor Green
     
-    # Optional: Export to CSV for further analysis
-    $csvPath = $OutputPath -replace '\.html$', '.csv'
-    $complianceResults | Export-Csv -Path $csvPath -NoTypeInformation
-    Write-Host "CSV export saved: $csvPath" -ForegroundColor Green
+    # Non-compliant accounts CSV (if any)
+    $nonCompliantAccounts = $complianceResults | Where-Object { $_.ComplianceStatus -eq 'Non-Compliant' }
+    if ($nonCompliantAccounts.Count -gt 0) {
+        $nonCompliantPath = "$OutputDirectory\non_compliant_accounts.csv"
+        $nonCompliantAccounts | Export-Csv -Path $nonCompliantPath -NoTypeInformation
+        Write-Host "Non-compliant accounts CSV: $nonCompliantPath" -ForegroundColor Yellow
+    }
+    
+    # Generate HTML report (nice-to-have for admins)
+    Write-Host "`nGenerating HTML report..." -ForegroundColor Yellow
+    $htmlPath = "$OutputDirectory\Termination_Compliance_Report.html"
+    New-TerminationComplianceReport -ComplianceResults $complianceResults -OutputPath $htmlPath
+    Write-Host "HTML report saved: $htmlPath" -ForegroundColor Green
+    
+    # Display summary using standardized output
+    Show-AuditSummary -AuditType "Termination Compliance" -OutputDirectory $OutputDirectory
     
     # Open report
-    $openReport = Read-Host "`nOpen HTML report now? (Y/N)"
+    $openReport = Read-Host "`nOpen output directory now? (Y/N)"
     if ($openReport -eq 'Y') {
-        Start-Process $OutputPath
+        Start-Process $OutputDirectory
     }
     
 } catch {

@@ -297,9 +297,65 @@ function Export-ADGroupMembers {
     )
     
     try {
-        $excel = New-Object -ComObject Excel.Application
-        $excel.Visible = $false
-        $workbook = $excel.Workbooks.Add()
+        # Check if Excel is available
+        try {
+            $excel = New-Object -ComObject Excel.Application -ErrorAction Stop
+            $excel.Visible = $false
+            $workbook = $excel.Workbooks.Add()
+        } catch {
+            Write-Warning "Excel is not installed or available. Falling back to CSV export."
+            
+            # Export to CSV instead
+            $csvPath = [System.IO.Path]::ChangeExtension($OutputPath, ".csv")
+            
+            # Create summary CSV
+            $summaryData = foreach ($group in $GroupAuditData) {
+                [PSCustomObject]@{
+                    GroupName = $group.GroupName
+                    Domain = $group.Domain
+                    Description = $group.Description
+                    Type = $group.GroupCategory
+                    Scope = $group.GroupScope
+                    ManagedBy = $group.ManagedBy
+                    TotalMembers = $group.MemberCount
+                    EnabledUsers = $group.EnabledMemberCount
+                    DisabledUsers = $group.DisabledMemberCount
+                    Status = $group.Status
+                    ErrorDetails = $group.ErrorDetails
+                    Created = $group.Created
+                    Modified = $group.Modified
+                    LastAudit = $group.LastAuditDate
+                }
+            }
+            
+            $summaryData | Export-Csv -Path $csvPath -NoTypeInformation
+            Write-Host "Group summary exported to CSV: $csvPath" -ForegroundColor Green
+            
+            # Create members CSV
+            $membersCsvPath = [System.IO.Path]::GetDirectoryName($csvPath) + "\GroupMembers_" + [System.IO.Path]::GetFileName($csvPath)
+            $allMembers = foreach ($group in $GroupAuditData) {
+                foreach ($member in $group.Members) {
+                    [PSCustomObject]@{
+                        GroupName = $group.GroupName
+                        Domain = $group.Domain
+                        MemberName = $member.Name
+                        MemberType = $member.ObjectClass
+                        MemberDomain = $member.Domain
+                        Enabled = $member.Enabled
+                        LastLogon = $member.LastLogonDate
+                        PasswordLastSet = $member.PasswordLastSet
+                        Description = $member.Description
+                    }
+                }
+            }
+            
+            if ($allMembers) {
+                $allMembers | Export-Csv -Path $membersCsvPath -NoTypeInformation
+                Write-Host "Group members exported to CSV: $membersCsvPath" -ForegroundColor Green
+            }
+            
+            return
+        }
         
         $summarySheet = $workbook.Worksheets.Item(1)
         $summarySheet.Name = "Group Summary"

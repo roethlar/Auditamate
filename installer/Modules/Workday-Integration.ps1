@@ -305,5 +305,4 @@ function New-TerminationComplianceReport {
     Write-Host "Termination compliance report generated: $OutputPath" -ForegroundColor Green
 }
 
-# Export functions
 # Functions are automatically available when script is dot-sourced

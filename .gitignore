@@ -32,3 +32,4 @@ Tests/
 
 # Tool scripts and maintenance
 .tools/
+Claude_*

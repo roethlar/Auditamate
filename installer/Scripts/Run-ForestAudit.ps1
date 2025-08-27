@@ -83,7 +83,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# Start logging
+# Start logging and timing
+$auditStartTime = Get-Date
+
 if (!(Test-Path $OutputDirectory)) {
     New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 }
@@ -288,66 +290,48 @@ try {
         }
     }
     
-    # Step 3: Generate HTML summary report
-    Write-Host "`nStep 3: Generating HTML summary report..." -ForegroundColor Yellow
-    $htmlSummary = @"
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Forest AD Audit Summary</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h1 { color: #1e3a8a; }
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; font-weight: bold; }
-        .summary { background-color: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0; }
-    </style>
-</head>
-<body>
-    <h1>Multi-Domain Forest AD Audit Report</h1>
-    <div class="summary">
-        <p><strong>Audit Date:</strong> $(Get-Date -Format 'MMMM dd, yyyy HH:mm')</p>
-        <p><strong>Forest Root:</strong> $(($forestDomains | Where-Object { $_.IsRoot }).Name)</p>
-        <p><strong>Domains Audited:</strong> $($auditDomains.Count)</p>
-        <p><strong>Groups Analyzed:</strong> $($groupData.Count)</p>
-        <p><strong>Total Members:</strong> $(($groupData | Measure-Object -Property MemberCount -Sum).Sum)</p>
-        <p><strong>Cross-Domain Groups:</strong> $($crossDomainGroups.Count)</p>
-    </div>
+    # Step 3: Generate enhanced web report with embedded content
+    Write-Host "`nStep 3: Generating enhanced web report..." -ForegroundColor Yellow
     
-    <h2>Group Audit Results</h2>
-    <table>
-        <tr>
-            <th>Domain</th>
-            <th>Group Name</th>
-            <th>Members</th>
-            <th>Status</th>
-            <th>Evidence</th>
-        </tr>
-$(foreach ($group in $groupData) {
-    $folderName = "$($group.Domain)_$($group.GroupName)" -replace '[^\w\-]', '_'
-    @"
-        <tr>
-            <td>$($group.Domain)</td>
-            <td>$($group.GroupName)</td>
-            <td>$($group.MemberCount)</td>
-            <td>$($group.Status)</td>
-            <td><a href="./$folderName/">View Details</a></td>
-        </tr>
-"@
-})
-    </table>
+    # Import the enhanced web report generator
+    . "$PSScriptRoot\..\Modules\Enhanced-WebReportGenerator.ps1"
     
-    <p style="margin-top: 20px; font-size: 0.9em; color: #666;">
-        Each group folder contains: members.csv, member_details.csv, screenshots, and audit transcript.
-    </p>
-</body>
-</html>
-"@
+    # Collect all screenshots from group folders
+    $allScreenshots = @()
+    Get-ChildItem "$OutputDirectory\*" -Directory | ForEach-Object {
+        $groupFolder = $_
+        Get-ChildItem "$($groupFolder.FullName)\*.png" -ErrorAction SilentlyContinue | ForEach-Object {
+            $allScreenshots += $_.FullName
+        }
+    }
     
-    $htmlPath = "$OutputDirectory\forest_audit_summary.html"
-    $htmlSummary | Out-File $htmlPath -Encoding UTF8
-    Write-Host "HTML summary created: $htmlPath" -ForegroundColor Green
+    # Collect all CSV files
+    $allCsvFiles = @()
+    Get-ChildItem "$OutputDirectory" -Recurse -Filter "*.csv" | ForEach-Object {
+        $allCsvFiles += $_.FullName
+    }
+    
+    # Prepare metadata
+    $forestRoot = ($forestDomains | Where-Object { $_.IsRoot }).Name
+    $metadata = @{
+        "Audit Type" = "Multi-Domain Forest Audit"
+        "Forest Root" = $forestRoot
+        "Domains Audited" = "$($auditDomains.Count)"
+        "Groups Analyzed" = "$($groupData.Count)"
+        "Total Members" = "$(($groupData | Measure-Object -Property MemberCount -Sum).Sum)"
+        "Cross-Domain Groups" = "$($crossDomainGroups.Count)"
+        "Audit Duration" = "$('{0:mm\:ss}' -f ([datetime]$(Get-Date) - [datetime]$auditStartTime))"
+        "Command Capture" = if ($CaptureCommands) { "Enabled" } else { "Disabled" }
+    }
+    
+    # Generate the enhanced web report
+    $htmlPath = "$OutputDirectory\Forest_Audit_Report.html"
+    $reportResult = New-EnhancedWebReport -AuditData $groupData -ScreenshotPaths $allScreenshots -CsvFiles $allCsvFiles -OutputPath $htmlPath -ReportTitle "Multi-Domain Forest AD Audit Report" -CompanyName $env:USERDNSDOMAIN -CustomMetadata $metadata
+    
+    Write-Host "Enhanced web report created: $htmlPath" -ForegroundColor Green
+    Write-Host "  Report includes $($reportResult.EmbeddedImages) embedded screenshots" -ForegroundColor Cyan
+    Write-Host "  Report includes $($reportResult.EmbeddedDataFiles) embedded data files" -ForegroundColor Cyan
+    Write-Host "  Report file size: $([math]::Round($reportResult.FileSize / 1MB, 2)) MB" -ForegroundColor Cyan
     
     # Step 5: Send email if requested
     if ($SendEmail -and $config.EmailSettings.Recipients.Count -gt 0) {
@@ -369,7 +353,8 @@ $(foreach ($group in $groupData) {
     Write-Host "  Forest Audit Complete!" -ForegroundColor Green
     Write-Host "===============================================" -ForegroundColor Green
     Write-Host "`nReports saved to: $OutputDirectory" -ForegroundColor Cyan
-    Write-Host "  - HTML Summary: forest_audit_summary.html" -ForegroundColor White
+    Write-Host "  - Enhanced Web Report: Forest_Audit_Report.html" -ForegroundColor White
+    Write-Host "  - Complete self-contained report with embedded images and data" -ForegroundColor White
     Write-Host "  - Group Folders: $($groupData.Count) individual group folders with:" -ForegroundColor White
     Write-Host "    - members.csv (raw membership)" -ForegroundColor Gray
     Write-Host "    - member_details.csv (detailed info)" -ForegroundColor Gray

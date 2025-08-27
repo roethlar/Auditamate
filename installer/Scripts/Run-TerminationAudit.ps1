@@ -129,11 +129,40 @@ try {
         Write-Host "Non-compliant accounts CSV: $nonCompliantPath" -ForegroundColor Yellow
     }
     
-    # Generate HTML report (nice-to-have for admins)
-    Write-Host "`nGenerating HTML report..." -ForegroundColor Yellow
-    $htmlPath = "$OutputDirectory\Termination_Compliance_Report.html"
-    New-TerminationComplianceReport -ComplianceResults $complianceResults -OutputPath $htmlPath
-    Write-Host "HTML report saved: $htmlPath" -ForegroundColor Green
+    # Generate enhanced web report with embedded content
+    Write-Host "`nGenerating enhanced web report..." -ForegroundColor Yellow
+    
+    # Import the enhanced web report generator
+    . "$PSScriptRoot\..\Modules\Enhanced-WebReportGenerator.ps1"
+    
+    # Collect all CSV files for embedding
+    $csvFiles = Get-ChildItem -Path $OutputDirectory -Filter "*.csv" | Select-Object -ExpandProperty FullName
+    
+    # Collect any screenshots (if available)
+    $screenshots = @()
+    if (Test-Path "$OutputDirectory\Screenshots") {
+        $screenshots = Get-ChildItem -Path "$OutputDirectory\Screenshots" -Filter "*.png" | Select-Object -ExpandProperty FullName
+    }
+    
+    # Prepare comprehensive metadata
+    $reportMetadata = @{
+        "Audit Type" = "Employee Termination Audit"
+        "Compliance Framework" = "SOX / IT Governance"
+        "User Audited" = $Username
+        "Access Reviews" = "$($complianceResults.AccessReviews.Count)"
+        "Compliance Issues" = "$($complianceResults.ComplianceIssues.Count)"
+        "Critical Findings" = "$(($complianceResults.ComplianceIssues | Where-Object { $_.Severity -eq 'Critical' }).Count)"
+        "System Coverage" = "$($complianceResults.SystemsCovered.Count) systems"
+        "Auditor" = $env:USERNAME
+        "Remediation Required" = if ($complianceResults.ComplianceIssues.Count -gt 0) { "YES" } else { "NO" }
+    }
+    
+    # Generate the enhanced web report
+    $htmlPath = "$OutputDirectory\Termination_Audit_Report.html"
+    $reportResult = New-EnhancedWebReport -AuditData $complianceResults.AccessReviews -ScreenshotPaths $screenshots -CsvFiles $csvFiles -OutputPath $htmlPath -ReportTitle "Employee Termination Audit Report" -CompanyName $env:USERDNSDOMAIN -CustomMetadata $reportMetadata
+    
+    Write-Host "Enhanced termination audit report created: $htmlPath" -ForegroundColor Green
+    Write-Host "Report includes $($reportResult.EmbeddedDataFiles) embedded data files" -ForegroundColor Cyan
     
     # Display summary using standardized output
     Show-AuditSummary -AuditType "Termination Compliance" -OutputDirectory $OutputDirectory

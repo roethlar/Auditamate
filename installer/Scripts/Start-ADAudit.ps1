@@ -95,15 +95,18 @@ do {
     Write-Host "4. Local Administrator Audit" -ForegroundColor White
     Write-Host "5. Termination Audit" -ForegroundColor White
     Write-Host ""
-    Write-Host "6. Test Prerequisites" -ForegroundColor Gray
-    Write-Host "7. Update Configuration" -ForegroundColor Gray
-    Write-Host "8. Configure Forest Audit Groups" -ForegroundColor Gray
-    Write-Host "9. View Recent Reports" -ForegroundColor Gray
+    Write-Host "6. Comprehensive Security Audit (NEW)" -ForegroundColor Green
+    Write-Host "   - Service Accounts - Azure AD - Trusts - GPOs" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "7. Test Prerequisites" -ForegroundColor Gray
+    Write-Host "8. Update Configuration" -ForegroundColor Gray
+    Write-Host "9. Configure Forest Audit Groups" -ForegroundColor Gray
+    Write-Host "10. View Recent Reports" -ForegroundColor Gray
     Write-Host ""
     Write-Host "0. Exit" -ForegroundColor Gray
     Write-Host ""
     
-    $choice = Read-Host "Select option (0-9)"
+    $choice = Read-Host "Select option (0-10)"
     
     switch ($choice) {
         "1" {
@@ -163,21 +166,46 @@ do {
         }
         
         "6" {
+            Write-Host "`n=== Comprehensive Security Audit ===" -ForegroundColor Cyan
+            Write-Host "This audit includes:" -ForegroundColor Gray
+            Write-Host "- Service Account Discovery" -ForegroundColor Gray  
+            Write-Host "- Azure AD Roles and Permissions" -ForegroundColor Gray
+            Write-Host "- AD Trusts and Delegation" -ForegroundColor Gray
+            Write-Host "- GPO Security Analysis" -ForegroundColor Gray
+            Write-Host ""
+            
+            $includeAzure = Read-Host "Include Azure AD audit? (Y/N)"
+            $includeAll = Read-Host "Include all components? (Y/N) [Recommended]"
+            
+            $params = @()
+            if ($includeAzure -eq 'Y') { $params += "-IncludeAzureAD" }
+            if ($includeAll -eq 'Y') { 
+                $params += "-IncludeAll" 
+            } else {
+                $params += "-IncludeServiceAccounts", "-IncludeTrusts", "-IncludeGPOs"
+            }
+            
+            Write-Host "`nStarting comprehensive audit..." -ForegroundColor Yellow
+            $paramString = $params -join " "
+            Invoke-Expression "& '$scriptPath\Scripts\Run-ComprehensiveAudit.ps1' $paramString"
+        }
+        
+        "7" {
             Write-Host "`nChecking prerequisites..." -ForegroundColor Yellow
             & "$scriptPath\Test-Prerequisites.ps1"
         }
         
-        "7" {
+        "8" {
             Write-Host "`nLaunching configuration update..." -ForegroundColor Yellow
             & "$scriptPath\Setup-AuditTool.ps1" -Mode UpdateConfig
         }
         
-        "8" {
+        "9" {
             Write-Host "`nConfiguring forest audit groups..." -ForegroundColor Yellow
             & "$scriptPath\Setup-AuditTool.ps1" -Mode ConfigureForestGroups
         }
         
-        "9" {
+        "10" {
             Write-Host "`nOpening reports folder..." -ForegroundColor Yellow
             $reportsPath = try {
                 $us = Get-Content $userConfig | ConvertFrom-Json

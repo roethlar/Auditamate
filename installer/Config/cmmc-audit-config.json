@@ -1,0 +1,247 @@
+{
+    "CMMCAuditConfiguration": {
+        "Version": "2.0",
+        "LastUpdated": "2025-08-15",
+        "Description": "CMMC Compliance Audit Configuration for DoD Contractors",
+        "Framework": "CMMC 2.0"
+    },
+    "CMMCLevels": {
+        "Level1": {
+            "Name": "Foundational",
+            "Description": "Basic safeguarding of FCI (Federal Contract Information)",
+            "Practices": 17,
+            "Domains": ["AC", "IA", "MP", "PE", "SC", "SI"]
+        },
+        "Level2": {
+            "Name": "Advanced", 
+            "Description": "Intermediate safeguarding of CUI (Controlled Unclassified Information)",
+            "Practices": 110,
+            "Domains": ["AC", "AT", "AU", "CA", "CM", "CP", "IA", "IR", "MA", "MP", "PE", "PS", "RA", "SA", "SC", "SI", "SR"]
+        },
+        "Level3": {
+            "Name": "Expert",
+            "Description": "Advanced/progressive safeguarding of CUI and protection against APTs",
+            "Practices": 110,
+            "Domains": ["AC", "AT", "AU", "CA", "CM", "CP", "IA", "IR", "MA", "MP", "PE", "PS", "RA", "SA", "SC", "SI", "SR"]
+        }
+    },
+    "AccessControl": {
+        "Domain": "AC",
+        "Description": "Access Control - Limit system access to authorized users, processes, and devices",
+        "Groups": {
+            "PrivilegedAccess": [
+                "Domain Admins",
+                "Enterprise Admins", 
+                "Administrators",
+                "Server Operators",
+                "Account Operators",
+                "Backup Operators",
+                "Print Operators"
+            ],
+            "FunctionalAccess": [
+                "Power Users",
+                "Remote Desktop Users",
+                "Network Configuration Operators",
+                "Performance Monitor Users",
+                "Performance Log Users"
+            ],
+            "CUIAccess": [
+                "Document Managers",
+                "File Share Admins",
+                "SharePoint Admins",
+                "Confidential Data Access",
+                "Controlled Information Users"
+            ]
+        },
+        "Controls": {
+            "AC.L1-3.1.1": "Limit system access to authorized users, processes, and devices",
+            "AC.L1-3.1.2": "Limit system access to the types of transactions and functions that authorized users are permitted to execute",
+            "AC.L2-3.1.3": "Control the flow of CUI in accordance with approved authorizations"
+        }
+    },
+    "IdentificationAuthentication": {
+        "Domain": "IA",
+        "Description": "Identification and Authentication - Identify and authenticate users and processes",
+        "Groups": {
+            "ServiceAccounts": [
+                "Service Accounts",
+                "System Accounts", 
+                "Application Accounts"
+            ],
+            "AdminAccounts": [
+                "Admin Accounts",
+                "Privileged Accounts",
+                "Emergency Accounts"
+            ]
+        },
+        "Controls": {
+            "IA.L1-3.5.1": "Identify system users, processes acting on behalf of users, and devices",
+            "IA.L1-3.5.2": "Authenticate (or verify) the identities of users, processes, or devices",
+            "IA.L2-3.5.3": "Use multifactor authentication for local and network access to privileged accounts"
+        }
+    },
+    "SystemProtection": {
+        "Domain": "SC",
+        "Description": "System and Communications Protection - Monitor, control, and protect communications",
+        "Groups": {
+            "BoundaryProtection": [
+                "Firewall Administrators",
+                "Network Administrators",
+                "Security Operations",
+                "Network Security Team"
+            ],
+            "SystemArchitects": [
+                "Security Architects",
+                "System Architects", 
+                "Infrastructure Architects",
+                "Network Architects"
+            ],
+            "CommunicationsProtection": [
+                "VPN Administrators",
+                "Encryption Key Managers",
+                "PKI Administrators"
+            ]
+        },
+        "Controls": {
+            "SC.L1-3.13.1": "Monitor, control, and protect communications at external network boundaries",
+            "SC.L2-3.13.2": "Employ architectural designs, software development techniques, and systems engineering principles",
+            "SC.L2-3.13.5": "Implement cryptographic mechanisms to prevent unauthorized disclosure of CUI"
+        }
+    },
+    "AuditAccountability": {
+        "Domain": "AU", 
+        "Description": "Audit and Accountability - Create, protect, and retain system audit records",
+        "Groups": {
+            "AuditManagement": [
+                "Log Administrators",
+                "SIEM Administrators", 
+                "Audit Administrators",
+                "Security Analysts"
+            ],
+            "LogReview": [
+                "Security Operations Center",
+                "Incident Response Team",
+                "Compliance Officers"
+            ]
+        },
+        "Controls": {
+            "AU.L2-3.3.1": "Create and retain system audit logs and records to the extent needed to enable monitoring",
+            "AU.L2-3.3.2": "Ensure that audit logs are protected from unauthorized access, modification, and deletion",
+            "AU.L2-3.3.3": "Review and update logged events"
+        }
+    },
+    "ConfigurationManagement": {
+        "Domain": "CM",
+        "Description": "Configuration Management - Establish and maintain baseline configurations",
+        "Groups": {
+            "ConfigurationControl": [
+                "Configuration Managers",
+                "Change Control Board",
+                "System Administrators",
+                "Infrastructure Team"
+            ],
+            "BaselineManagement": [
+                "Security Baseline Managers",
+                "Compliance Team",
+                "Standards Team"
+            ]
+        },
+        "Controls": {
+            "CM.L2-3.4.1": "Establish and maintain baseline configurations and inventories",
+            "CM.L2-3.4.2": "Establish and enforce security configuration settings",
+            "CM.L2-3.4.6": "Employ least functionality by configuring systems to provide essential capabilities"
+        }
+    },
+    "IncidentResponse": {
+        "Domain": "IR",
+        "Description": "Incident Response - Establish incident handling capability",
+        "Groups": {
+            "IncidentTeam": [
+                "Incident Response Team",
+                "Security Operations Center",
+                "Cyber Security Team",
+                "Emergency Response"
+            ]
+        },
+        "Controls": {
+            "IR.L2-3.6.1": "Establish an operational incident-handling capability",
+            "IR.L2-3.6.2": "Track, document, and report incidents to designated officials"
+        }
+    },
+    "RiskLevels": {
+        "CRITICAL": {
+            "Description": "Immediate action required - affects CMMC certification",
+            "Impact": "Certification at risk"
+        },
+        "HIGH": {
+            "Description": "High priority remediation required",
+            "Impact": "Significant compliance gap"
+        },
+        "MEDIUM": {
+            "Description": "Should be addressed for compliance",
+            "Impact": "Minor compliance gap"
+        },
+        "LOW": {
+            "Description": "Best practice recommendation",
+            "Impact": "Enhancement opportunity"
+        }
+    },
+    "ComplianceMapping": {
+        "NIST_SP_800-171": {
+            "Description": "NIST Special Publication 800-171 requirements",
+            "Mapping": "Direct mapping to CMMC practices"
+        },
+        "NIST_SP_800-53": {
+            "Description": "NIST Special Publication 800-53 security controls",
+            "Mapping": "Enhanced controls for Level 3+"
+        }
+    },
+    "AssessmentScope": {
+        "Level1Requirements": [
+            "Basic access control",
+            "User identification", 
+            "Media protection",
+            "Physical protection",
+            "System monitoring"
+        ],
+        "Level2Requirements": [
+            "All Level 1 requirements",
+            "Awareness and training",
+            "Audit and accountability", 
+            "Configuration management",
+            "Incident response",
+            "Risk assessment",
+            "System and information integrity"
+        ],
+        "Level3Requirements": [
+            "All Level 2 requirements",
+            "Advanced threat protection",
+            "Supply chain risk management",
+            "Advanced persistent threat (APT) defense"
+        ]
+    },
+    "ReportingSettings": {
+        "IncludeScreenshots": true,
+        "GenerateEvidence": true,
+        "CreateAuditTrail": true,
+        "CMMCMapping": true,
+        "NISTMapping": true,
+        "ExecutiveSummary": true,
+        "DetailedFindings": true,
+        "RemediationPlan": true,
+        "GapAnalysis": true,
+        "MaturityAssessment": true
+    },
+    "ExcludeGroups": [
+        "Test Groups",
+        "Temporary Groups",
+        "Disabled Groups"
+    ],
+    "RequiredDocumentation": [
+        "System Security Plan (SSP)",
+        "Plan of Action and Milestones (POA&M)", 
+        "Incident Response Plan",
+        "Configuration Management Plan",
+        "Audit and Accountability Procedures"
+    ]
+}

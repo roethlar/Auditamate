@@ -299,21 +299,40 @@ try {
     
     Export-ADGroupMembers -GroupAuditData $groupData -OutputPath $excelPath
     
-    # Step 5: Generate HTML report (admin view)
-    Write-AuditLog "`nStep 5: Generating HTML report (admin view)..." "INFO"
-    $htmlPath = "$($outputPaths.HTMLDirectory)\AD_Audit_Report_$(Get-Date -Format 'yyyyMMdd').html"
+    # Step 5: Generate enhanced web report with embedded content
+    Write-AuditLog "`nStep 5: Generating enhanced web report..." "INFO"
+    
+    # Import the enhanced web report generator
+    . "$PSScriptRoot\..\Modules\Enhanced-WebReportGenerator.ps1"
+    
+    # Collect all CSV files for embedding
+    $csvFiles = Get-ChildItem -Path $outputPaths.CSVDirectory -Filter "*.csv" | Select-Object -ExpandProperty FullName
+    
+    # Prepare comprehensive metadata
     $reportMetadata = @{
-        "Audit Type" = "SOX Compliance"
+        "Audit Type" = "Active Directory Complete Audit"
+        "Compliance Framework" = "SOX"
         "Auditor" = $env:USERNAME
-        "Groups Audited" = $auditGroups.Count
+        "Groups Audited" = "$($auditGroups.Count)"
+        "Total Members Found" = "$(($groupData | Measure-Object -Property MemberCount -Sum).Sum)"
+        "Enabled Members" = "$(($groupData | Measure-Object -Property EnabledMemberCount -Sum).Sum)"
+        "Disabled Members" = "$(($groupData | Measure-Object -Property DisabledMemberCount -Sum).Sum)"
+        "Domain" = $env:USERDNSDOMAIN
+        "Command Capture" = if ($CaptureCommands) { "Enabled" } else { "Disabled" }
     }
+    
+    # Generate the enhanced web report
+    $htmlPath = "$($outputPaths.HTMLDirectory)\AD_Complete_Audit_Report_$(Get-Date -Format 'yyyyMMdd').html"
     
     if ($CaptureCommands) {
-        $cmd = "New-ADHtmlReport -GroupAuditData `$groupData -Screenshots `$screenshots -OutputPath '$htmlPath' -CustomMetadata `$reportMetadata"
-        Add-AuditCommand -CommandName "New-ADHtmlReport" -CommandText $cmd -Description "Generating HTML audit report" -CaptureScreenshot
+        $cmd = "New-EnhancedWebReport -AuditData `$groupData -ScreenshotPaths `$screenshots -CsvFiles `$csvFiles -OutputPath '$htmlPath' -ReportTitle 'AD Complete Audit Report' -CompanyName `$env:USERDNSDOMAIN -CustomMetadata `$reportMetadata"
+        Add-AuditCommand -CommandName "New-EnhancedWebReport" -CommandText $cmd -Description "Generating enhanced web audit report with embedded content" -CaptureScreenshot
     }
     
-    New-ADHtmlReport -GroupAuditData $groupData -Screenshots $screenshots -OutputPath $htmlPath -CustomMetadata $reportMetadata
+    $reportResult = New-EnhancedWebReport -AuditData $groupData -ScreenshotPaths $screenshots -CsvFiles $csvFiles -OutputPath $htmlPath -ReportTitle "Active Directory Complete Audit Report" -CompanyName $env:USERDNSDOMAIN -CustomMetadata $reportMetadata
+    
+    Write-AuditLog "Enhanced web report created: $htmlPath" "SUCCESS"
+    Write-AuditLog "Report includes $($reportResult.EmbeddedImages) embedded screenshots and $($reportResult.EmbeddedDataFiles) data files" "INFO"
     
     # Stop code capture and generate documentation
     if ($CaptureCommands) {

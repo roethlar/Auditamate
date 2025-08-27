@@ -1,0 +1,182 @@
+{
+    "SOXAuditConfiguration": {
+        "Version": "1.0",
+        "LastUpdated": "2025-08-15",
+        "Description": "SOX Compliance Audit Configuration for Financial Controls and IT Governance"
+    },
+    "Section302": {
+        "Description": "Management Certification - Quarterly and annual certifications",
+        "FinancialSystemGroups": [
+            "SAP Administrators",
+            "Oracle Administrators",
+            "Finance System Admins",
+            "ERP Administrators",
+            "QuickBooks Administrators",
+            "Financial Database Admins",
+            "Hyperion Administrators",
+            "PeopleSoft Administrators"
+        ],
+        "SegregationOfDutiesChecks": {
+            "FinanceGroups": [
+                "Finance Users",
+                "Accounting",
+                "Financial Analysts",
+                "Controllers",
+                "AP Clerks",
+                "AR Clerks",
+                "Payroll Administrators",
+                "Treasury Team"
+            ],
+            "ITGroups": [
+                "Domain Admins",
+                "Server Operators",
+                "IT Administrators",
+                "Database Administrators",
+                "System Administrators"
+            ],
+            "ProhibitedCombinations": [
+                "Finance + IT Admin",
+                "Accounting + Database Admin",
+                "Payroll + System Admin"
+            ]
+        },
+        "DatabaseAccessGroups": [
+            "SQL Server Administrators",
+            "Database Administrators",
+            "Oracle DBA",
+            "Finance Database Users",
+            "ERP Database Access",
+            "Financial Reporting DB"
+        ]
+    },
+    "Section404": {
+        "Description": "Internal Controls Assessment - Annual management assessment",
+        "ChangeManagementGroups": [
+            "Change Managers",
+            "Release Managers",
+            "Production Deployment",
+            "Code Deployment",
+            "Emergency Change",
+            "CAB Members"
+        ],
+        "ProductionSystemGroups": [
+            "Production Administrators",
+            "Production Support",
+            "Financial System Production",
+            "ERP Production Access",
+            "Critical System Admins",
+            "Production Database Access"
+        ],
+        "FinancialReportingGroups": [
+            "Financial Reporting",
+            "Business Intelligence",
+            "Finance Analysts",
+            "CFO Direct Reports",
+            "SEC Reporting Team",
+            "Management Reporting"
+        ],
+        "BackupRecoveryGroups": [
+            "Backup Operators",
+            "Backup Administrators",
+            "Disaster Recovery Team",
+            "Business Continuity",
+            "Data Recovery Specialists"
+        ],
+        "CriticalControls": [
+            "Change Management Process",
+            "Production Access Controls",
+            "Data Backup Integrity",
+            "Financial Close Process",
+            "Monthly/Quarterly Reporting",
+            "Journal Entry Controls"
+        ]
+    },
+    "Section906": {
+        "Description": "CEO/CFO Certification - Criminal penalties for false certification",
+        "ExecutiveGroups": [
+            "CEO Direct Reports",
+            "CFO Direct Reports",
+            "Executive Team",
+            "C-Level Executives",
+            "Board of Directors",
+            "Senior Leadership"
+        ],
+        "FinancialDisclosureGroups": [
+            "SEC Reporting",
+            "Financial Disclosure",
+            "Investor Relations",
+            "External Auditor Access",
+            "Legal Team",
+            "Compliance Officers"
+        ],
+        "CriticalSystemAccess": [
+            "Financial Consolidation Systems",
+            "SEC Reporting Tools",
+            "Executive Dashboards",
+            "Board Reporting Systems"
+        ]
+    },
+    "RiskLevels": {
+        "CRITICAL": {
+            "Description": "Immediate remediation required",
+            "Examples": [
+                "Segregation of duties violations",
+                "Unauthorized financial system access",
+                "Missing change controls"
+            ]
+        },
+        "HIGH": {
+            "Description": "High priority remediation",
+            "Examples": [
+                "Excessive privileged access",
+                "Weak access controls",
+                "Insufficient monitoring"
+            ]
+        },
+        "MEDIUM": {
+            "Description": "Should be addressed in next cycle",
+            "Examples": [
+                "Documentation gaps",
+                "Process improvements needed"
+            ]
+        }
+    },
+    "ComplianceRequirements": {
+        "AccessManagement": {
+            "Description": "Control access to financial systems and data",
+            "Requirements": [
+                "Role-based access control",
+                "Least privilege principle",
+                "Regular access reviews",
+                "Terminated user cleanup"
+            ]
+        },
+        "ChangeManagement": {
+            "Description": "Control changes to financial systems",
+            "Requirements": [
+                "Documented change process",
+                "Approval workflows",
+                "Testing requirements",
+                "Rollback procedures"
+            ]
+        },
+        "DataIntegrity": {
+            "Description": "Ensure accuracy and completeness of financial data",
+            "Requirements": [
+                "Data validation controls",
+                "Backup and recovery",
+                "Data retention policies",
+                "Audit trails"
+            ]
+        }
+    },
+    "ReportingSettings": {
+        "IncludeScreenshots": true,
+        "GenerateEvidence": true,
+        "CreateAuditTrail": true,
+        "ComplianceMapping": true,
+        "ExecutiveSummary": true,
+        "DetailedFindings": true,
+        "RemediationPlan": true
+    }
+}

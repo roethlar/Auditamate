@@ -1,0 +1,160 @@
+{
+    "AuditConfiguration": {
+        "Version": "2.0",
+        "LastUpdated": "2025-08-15",
+        "Description": "General AD Audit Configuration for Domain and Group Audits"
+    },
+    "DefaultAuditGroups": [
+        "Domain Admins",
+        "adi_server_admins",
+        "WW_NT_DBA",
+        "CORPIS_TIER2_MSSQLDBA",
+        "HPE_AMS_SERVER_ADMINS",
+        "CERT PUBLISHERS",
+        "SERVER OPERATORS",
+        "ADMINISTRATORS",
+        "ENTERPRISE_ADMINS",
+        "SCHEMA_ADMINS",
+        "Enterprise Admins",
+        "Schema Admins",
+        "Administrators",
+        "Server Operators",
+        "Account Operators",
+        "Backup Operators",
+        "Print Operators"
+    ],
+    "Groups": [
+        "Domain Admins",
+        "adi_server_admins",
+        "WW_NT_DBA", 
+        "CORPIS_TIER2_MSSQLDBA",
+        "HPE_AMS_SERVER_ADMINS",
+        "CERT PUBLISHERS",
+        "SERVER OPERATORS",
+        "ADMINISTRATORS",
+        "ENTERPRISE_ADMINS",
+        "SCHEMA_ADMINS",
+        "Enterprise Admins",
+        "Schema Admins", 
+        "Administrators",
+        "Server Operators",
+        "Account Operators",
+        "Backup Operators",
+        "Print Operators",
+        "Replicator",
+        "Power Users",
+        "Remote Desktop Users"
+    ],
+    "GroupCategories": {
+        "HighPrivilege": [
+            "Domain Admins",
+            "ENTERPRISE_ADMINS",
+            "SCHEMA_ADMINS",
+            "Enterprise Admins",
+            "Schema Admins",
+            "ADMINISTRATORS",
+            "Administrators"
+        ],
+        "DatabaseAdministrators": [
+            "WW_NT_DBA",
+            "CORPIS_TIER2_MSSQLDBA",
+            "SQL Server Administrators",
+            "Database Administrators",
+            "Oracle DBA"
+        ],
+        "ServerAdministrators": [
+            "adi_server_admins",
+            "HPE_AMS_SERVER_ADMINS", 
+            "SERVER OPERATORS",
+            "Server Operators",
+            "System Administrators"
+        ],
+        "SecurityOperations": [
+            "CERT PUBLISHERS",
+            "Certificate Publishers",
+            "Security Administrators",
+            "PKI Administrators"
+        ],
+        "StandardPrivileged": [
+            "Account Operators",
+            "Backup Operators", 
+            "Print Operators",
+            "Power Users",
+            "Remote Desktop Users"
+        ]
+    },
+    "ExcludeGroups": [
+        "Domain Users",
+        "Authenticated Users", 
+        "Everyone",
+        "Domain Guests",
+        "Guest",
+        "Users"
+    ],
+    "AuditSettings": {
+        "IncludeNestedGroups": true,
+        "IncludeDisabledUsers": false,
+        "CaptureCommands": true,
+        "ThrottleLimit": 10,
+        "BatchSize": 100,
+        "CheckUserProperties": true,
+        "CheckGroupProperties": true,
+        "CheckMembershipHistory": false
+    },
+    "ReportingSettings": {
+        "DefaultReportPath": "..\\Output",
+        "GenerateHTML": true,
+        "GenerateCSV": true, 
+        "IncludeScreenshots": true,
+        "CreateAuditTrail": true,
+        "DetailedUserInfo": true,
+        "SummaryReport": true
+    },
+    "EmailSettings": {
+        "Enabled": false,
+        "Recipients": [],
+        "SMTPServer": "",
+        "From": "",
+        "Subject": "AD Audit Report - {{DateTime}}"
+    },
+    "MultiDomainSettings": {
+        "AuditAllDomains": false,
+        "SpecificDomains": [],
+        "IncludeForestRootGroups": false,
+        "ResolveForeignSecurityPrincipals": true
+    },
+    "ComplianceProfiles": {
+        "SOX": {
+            "Groups": [
+                "Domain Admins",
+                "WW_NT_DBA",
+                "CORPIS_TIER2_MSSQLDBA",
+                "adi_server_admins",
+                "ADMINISTRATORS",
+                "ENTERPRISE_ADMINS"
+            ],
+            "FocusAreas": [
+                "Segregation of Duties",
+                "Database Access",
+                "Financial System Access",
+                "Change Management"
+            ]
+        },
+        "CMMC": {
+            "Groups": [
+                "Domain Admins",
+                "ADMINISTRATORS", 
+                "adi_server_admins",
+                "HPE_AMS_SERVER_ADMINS",
+                "SERVER OPERATORS",
+                "CERT PUBLISHERS"
+            ],
+            "FocusAreas": [
+                "Access Control",
+                "System Protection",
+                "Configuration Management",
+                "Audit and Accountability"
+            ]
+        }
+    }
+}

@@ -273,23 +273,46 @@ try {
         Write-AuditLog "Compliance issues CSV created: $issuePath" "WARNING"
     }
     
-    # Generate HTML report (nice-to-have for admins)
-    Write-AuditLog "`nGenerating HTML report..." "INFO"
+    # Generate enhanced web report with embedded content
+    Write-AuditLog "`nGenerating enhanced web report..." "INFO"
+    
+    # Import the enhanced web report generator
+    . "$PSScriptRoot\..\Modules\Enhanced-WebReportGenerator.ps1"
+    
+    # Collect all CSV files for embedding
+    $csvFiles = Get-ChildItem -Path $OutputDirectory -Filter "*.csv" | Select-Object -ExpandProperty FullName
+    
+    # Collect any screenshots (if available)
+    $screenshots = @()
+    if (Test-Path "$OutputDirectory\Screenshots") {
+        $screenshots = Get-ChildItem -Path "$OutputDirectory\Screenshots" -Filter "*.png" | Select-Object -ExpandProperty FullName
+    }
+    
+    # Prepare comprehensive metadata
+    $reportMetadata = @{
+        "Audit Type" = "Local Administrator Access Audit"
+        "Compliance Framework" = "SOX"
+        "Server Count" = "$($auditServers.Count)"
+        "Compliance Level" = if ($ServerGroup) { $config.ServerGroups.$ServerGroup.ComplianceLevel } else { "Standard" }
+        "Reachable Servers" = "$(($auditData.ServerResults | Where-Object { $_.Status -eq 'Success' }).Count)"
+        "Unreachable Servers" = "$(($auditData.ServerResults | Where-Object { $_.Status -ne 'Success' }).Count)"
+        "Total Local Admins Found" = "$(($auditData.ServerResults | Measure-Object -Property AdminCount -Sum).Sum)"
+        "Compliance Issues" = "$($auditData.ComplianceIssues.Count)"
+        "Auditor" = $env:USERNAME
+    }
+    
+    # Generate the enhanced web report
     $htmlPath = "$OutputDirectory\LocalAdmin_Audit_Report.html"
     
-    $reportMetadata = @{
-        "Audit Type" = "Local Administrator Access"
-        "Server Count" = $auditServers.Count
-        "Compliance Level" = if ($ServerGroup) { $config.ServerGroups.$ServerGroup.ComplianceLevel } else { "Standard" }
-    }
-    
     if ($CaptureCommands) {
-        $cmd = "New-LocalAdminHtmlReport -AuditData `$auditData -OutputPath '$htmlPath' -CustomMetadata `$reportMetadata"
-        Add-AuditCommand -CommandName "New-LocalAdminHtmlReport" -CommandText $cmd -Description "Generating HTML audit report" -CaptureScreenshot
+        $cmd = "New-EnhancedWebReport -AuditData `$auditData.ServerResults -ScreenshotPaths `$screenshots -CsvFiles `$csvFiles -OutputPath '$htmlPath' -ReportTitle 'Local Administrator Audit Report' -CompanyName `$env:USERDNSDOMAIN -CustomMetadata `$reportMetadata"
+        Add-AuditCommand -CommandName "New-EnhancedWebReport" -CommandText $cmd -Description "Generating enhanced web audit report with embedded content" -CaptureScreenshot
     }
     
-    New-LocalAdminHtmlReport -AuditData $auditData -OutputPath $htmlPath -CustomMetadata $reportMetadata
-    Write-AuditLog "HTML report saved: $htmlPath" "SUCCESS"
+    $reportResult = New-EnhancedWebReport -AuditData $auditData.ServerResults -ScreenshotPaths $screenshots -CsvFiles $csvFiles -OutputPath $htmlPath -ReportTitle "Local Administrator Audit Report" -CompanyName $env:USERDNSDOMAIN -CustomMetadata $reportMetadata
+    
+    Write-AuditLog "Enhanced web report created: $htmlPath" "SUCCESS"
+    Write-AuditLog "Report includes $($reportResult.EmbeddedImages) embedded screenshots and $($reportResult.EmbeddedDataFiles) data files" "INFO"
     
     # Stop code capture
     if ($CaptureCommands) {

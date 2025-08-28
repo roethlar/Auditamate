@@ -80,6 +80,9 @@ function New-EnhancedWebReport {
     # Calculate statistics
     $stats = Get-AuditStatistics -AuditData $AuditData
     
+    # Process and deduplicate user data
+    $processedData = Get-ProcessedAuditData -AuditData $AuditData
+    
     # Generate the complete HTML report
     $htmlContent = @"
 <!DOCTYPE html>
@@ -437,10 +440,99 @@ function New-EnhancedWebReport {
             margin: 2rem 0;
         }
         
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 2rem 0;
+        }
+        
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            background: var(--light-bg);
+            border-color: var(--secondary-color);
+        }
+        
+        .pagination button.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .summary-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .summary-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .summary-card h3 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .member-count {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        
+        .group-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .group-badge {
+            background: var(--light-bg);
+            border: 1px solid var(--border-color);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: var(--text-color);
+        }
+        
+        .data-row {
+            display: none;
+        }
+        
+        .data-row.visible {
+            display: table-row;
+        }
+        
         @media print {
-            .nav-tabs, .search-controls, .btn { display: none; }
+            .nav-tabs, .search-controls, .btn, .pagination { display: none; }
             .section { page-break-inside: avoid; }
             body { background: white; }
+            .data-row { display: table-row !important; }
         }
     </style>
 </head>
@@ -497,7 +589,9 @@ function New-EnhancedWebReport {
         <!-- Navigation Tabs -->
         <nav class="nav-tabs">
             <button class="nav-tab active" onclick="showTab('summary')">Executive Summary</button>
-            <button class="nav-tab" onclick="showTab('data')">Detailed Data</button>
+            <button class="nav-tab" onclick="showTab('groups')">Groups Overview</button>
+            <button class="nav-tab" onclick="showTab('users')">User Directory</button>
+            <button class="nav-tab" onclick="showTab('data')">Raw Data</button>
 "@
 
     if ($embeddedImages.Count -gt 0) {
@@ -557,10 +651,55 @@ function New-EnhancedWebReport {
             </section>
         </div>
         
-        <!-- Data Tab -->
+        <!-- Groups Overview Tab -->
+        <div id="groups" class="tab-content">
+            <section class="section">
+                <h2>Groups Overview</h2>
+                <div class="summary-cards" id="groupsSummary">
+                    <!-- Group cards will be dynamically generated -->
+                </div>
+            </section>
+        </div>
+        
+        <!-- User Directory Tab -->
+        <div id="users" class="tab-content">
+            <section class="section">
+                <h2>User Directory</h2>
+                <div class="search-controls">
+                    <input type="text" class="search-input" id="userSearch" placeholder="Search users..." onkeyup="searchUsers()">
+                    <select class="filter-select" id="groupFilter" onchange="filterUsersByGroup()">
+                        <option value="">All Groups</option>
+                    </select>
+                    <button class="btn" onclick="exportUsersToCSV()">Export Users CSV</button>
+                </div>
+                
+                <div class="pagination" id="userPagination"></div>
+                
+                <table class="data-table" id="user-directory-table">
+                    <thead>
+                        <tr>
+                            <th>Display Name</th>
+                            <th>Account Name</th>
+                            <th>Email</th>
+                            <th>Department</th>
+                            <th>Groups</th>
+                            <th>Status</th>
+                            <th>Last Logon</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        <!-- Users will be populated by JavaScript -->
+                    </tbody>
+                </table>
+                
+                <div class="pagination" id="userPaginationBottom"></div>
+            </section>
+        </div>
+        
+        <!-- Raw Data Tab -->
         <div id="data" class="tab-content">
             <section class="section">
-                <h2>Audit Results</h2>
+                <h2>Raw Audit Data</h2>
                 <div class="search-controls">
                     <input type="text" class="search-input" id="dataSearch" placeholder="Search audit data..." onkeyup="searchData()">
                     <button class="btn" onclick="exportTableToCSV(&quot;audit-data-table&quot;, &quot;audit-results.csv&quot;)">Export CSV</button>
@@ -689,8 +828,16 @@ function New-EnhancedWebReport {
     
     <script>
         // Audit data for charts
-        const auditData = $(($AuditData | ConvertTo-Json -Depth 3 -Compress) -replace '"', '\"');
-        const auditStats = $(($stats | ConvertTo-Json -Depth 2 -Compress) -replace '"', '\"');
+        const auditData = $($AuditData | ConvertTo-Json -Depth 3 -Compress);
+        const auditStats = $($stats | ConvertTo-Json -Depth 2 -Compress);
+        const processedData = $($processedData | ConvertTo-Json -Depth 4 -Compress);
+        
+        // Pagination settings
+        const usersPerPage = 50;
+        let currentPage = 1;
+        let filteredUsers = [];
+        let currentFilter = '';
+        let currentGroupFilter = '';
         
         // Embedded data for JavaScript access
         const embeddedData = {
@@ -699,7 +846,7 @@ function New-EnhancedWebReport {
     # Add embedded data as JSON for JavaScript
     foreach ($dataFile in $embeddedData.Keys) {
         $jsonData = $embeddedData[$dataFile] | ConvertTo-Json -Depth 5 -Compress
-        $htmlContent += "'$dataFile': $jsonData,"
+        $htmlContent += "`"$dataFile`": $jsonData,"
     }
 
     $htmlContent += @"
@@ -844,8 +991,9 @@ function New-EnhancedWebReport {
         function generateMemberDistributionChart() {
             try {
                 const ctx = document.getElementById('memberDistributionChart').getContext('2d');
-                const memberCounts = auditData.map(item => item.MemberCount || 0);
-                const groupNames = auditData.map(item => item.GroupName || 'Unknown');
+                const dataArray = Array.isArray(auditData) ? auditData : [auditData];
+                const memberCounts = dataArray.map(item => item.MemberCount || 0);
+                const groupNames = dataArray.map(item => item.GroupName || 'Unknown');
                 
                 new Chart(ctx, {
                     type: 'bar',
@@ -884,8 +1032,9 @@ function New-EnhancedWebReport {
             try {
                 const ctx = document.getElementById('domainBreakdownChart').getContext('2d');
                 const domains = {};
+                const dataArray = Array.isArray(auditData) ? auditData : [auditData];
                 
-                auditData.forEach(item => {
+                dataArray.forEach(item => {
                     const domain = item.Domain || 'Unknown';
                     domains[domain] = (domains[domain] || 0) + (item.MemberCount || 0);
                 });
@@ -927,8 +1076,9 @@ function New-EnhancedWebReport {
             try {
                 const ctx = document.getElementById('groupSizeChart').getContext('2d');
                 const sizes = { 'Small (1-10)': 0, 'Medium (11-50)': 0, 'Large (51-200)': 0, 'XLarge (200+)': 0 };
+                const dataArray = Array.isArray(auditData) ? auditData : [auditData];
                 
-                auditData.forEach(item => {
+                dataArray.forEach(item => {
                     const count = item.MemberCount || 0;
                     if (count <= 10) sizes['Small (1-10)']++;
                     else if (count <= 50) sizes['Medium (11-50)']++;
@@ -972,8 +1122,9 @@ function New-EnhancedWebReport {
                 const ctx = document.getElementById('enabledDisabledChart').getContext('2d');
                 let totalEnabled = 0;
                 let totalDisabled = 0;
+                const dataArray = Array.isArray(auditData) ? auditData : [auditData];
                 
-                auditData.forEach(item => {
+                dataArray.forEach(item => {
                     totalEnabled += item.EnabledMemberCount || 0;
                     totalDisabled += item.DisabledMemberCount || 0;
                 });
@@ -1015,6 +1166,236 @@ function New-EnhancedWebReport {
             } catch (e) {
                 console.warn('Could not generate enabled/disabled chart:', e);
             }
+        }
+        
+        // Initialize data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            generateCharts();
+            initializeGroupsOverview();
+            initializeUserDirectory();
+        });
+        
+        function initializeGroupsOverview() {
+            const container = document.getElementById('groupsSummary');
+            if (!container || !processedData.Groups) return;
+            
+            container.innerHTML = '';
+            processedData.Groups.forEach(group => {
+                const card = document.createElement('div');
+                card.className = 'summary-card';
+                card.onclick = () => showGroupUsers(group.GroupName);
+                
+                card.innerHTML = `
+                    <h3>${group.GroupName}</h3>
+                    <div class="member-count">${group.MemberCount}</div>
+                    <p>${group.Description || 'No description available'}</p>
+                    <div style="margin-top: 0.5rem; color: #6b7280;">
+                        <span>Enabled: ${group.EnabledCount}</span>
+                        ${group.DisabledCount > 0 ? ` | Disabled: ` + group.DisabledCount : ''}
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+        
+        function initializeUserDirectory() {
+            if (!processedData.Users) return;
+            
+            // Populate group filter
+            const groupFilter = document.getElementById('groupFilter');
+            const allGroups = new Set();
+            processedData.Users.forEach(user => {
+                user.Groups.forEach(group => allGroups.add(group));
+            });
+            
+            Array.from(allGroups).sort().forEach(group => {
+                const option = document.createElement('option');
+                option.value = group;
+                option.textContent = group;
+                groupFilter.appendChild(option);
+            });
+            
+            // Initialize with all users
+            filteredUsers = [...processedData.Users];
+            renderUserTable();
+        }
+        
+        function showGroupUsers(groupName) {
+            showTab('users');
+            const groupFilter = document.getElementById('groupFilter');
+            groupFilter.value = groupName;
+            filterUsersByGroup();
+        }
+        
+        function searchUsers() {
+            const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+            currentFilter = searchTerm;
+            applyFilters();
+        }
+        
+        function filterUsersByGroup() {
+            const groupFilter = document.getElementById('groupFilter').value;
+            currentGroupFilter = groupFilter;
+            applyFilters();
+        }
+        
+        function applyFilters() {
+            filteredUsers = processedData.Users.filter(user => {
+                const matchesSearch = !currentFilter || 
+                    user.DisplayName.toLowerCase().includes(currentFilter) ||
+                    user.SamAccountName.toLowerCase().includes(currentFilter) ||
+                    (user.EmailAddress && user.EmailAddress.toLowerCase().includes(currentFilter)) ||
+                    (user.Department && user.Department.toLowerCase().includes(currentFilter));
+                
+                const matchesGroup = !currentGroupFilter || user.Groups.includes(currentGroupFilter);
+                
+                return matchesSearch && matchesGroup;
+            });
+            
+            currentPage = 1;
+            renderUserTable();
+        }
+        
+        function renderUserTable() {
+            const tbody = document.getElementById('userTableBody');
+            const startIndex = (currentPage - 1) * usersPerPage;
+            const endIndex = startIndex + usersPerPage;
+            const pageUsers = filteredUsers.slice(startIndex, endIndex);
+            
+            tbody.innerHTML = '';
+            
+            pageUsers.forEach(user => {
+                const row = document.createElement('tr');
+                row.className = 'data-row visible';
+                
+                const groupBadges = user.Groups.map(group => 
+                    `<span class="group-badge">${group}</span>`
+                ).join(' ');
+                
+                const lastLogon = user.LastLogonDate ? 
+                    new Date(parseInt(user.LastLogonDate.replace(/\/Date\((\d+)\)\//, '$1'))).toLocaleDateString() : 
+                    'Never';
+                
+                row.innerHTML = `
+                    <td>${user.DisplayName || 'N/A'}</td>
+                    <td>${user.SamAccountName}</td>
+                    <td>${user.EmailAddress || 'N/A'}</td>
+                    <td>${user.Department || 'N/A'}</td>
+                    <td><div class="group-badges">${groupBadges}</div></td>
+                    <td><span class="badge ${user.Enabled ? 'badge-success' : 'badge-danger'}">${user.Enabled ? 'Enabled' : 'Disabled'}</span></td>
+                    <td>${lastLogon}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            renderPagination();
+        }
+        
+        function renderPagination() {
+            const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+            const paginationContainers = ['userPagination', 'userPaginationBottom'];
+            
+            paginationContainers.forEach(containerId => {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                
+                container.innerHTML = '';
+                
+                if (totalPages <= 1) return;
+                
+                // Previous button
+                const prevBtn = document.createElement('button');
+                prevBtn.textContent = '« Previous';
+                prevBtn.disabled = currentPage === 1;
+                prevBtn.onclick = () => changePage(currentPage - 1);
+                container.appendChild(prevBtn);
+                
+                // Page numbers
+                const startPage = Math.max(1, currentPage - 2);
+                const endPage = Math.min(totalPages, currentPage + 2);
+                
+                if (startPage > 1) {
+                    const btn1 = document.createElement('button');
+                    btn1.textContent = '1';
+                    btn1.onclick = () => changePage(1);
+                    container.appendChild(btn1);
+                    
+                    if (startPage > 2) {
+                        const ellipsis = document.createElement('span');
+                        ellipsis.textContent = '...';
+                        ellipsis.style.padding = '0.5rem';
+                        container.appendChild(ellipsis);
+                    }
+                }
+                
+                for (let i = startPage; i <= endPage; i++) {
+                    const btn = document.createElement('button');
+                    btn.textContent = i;
+                    btn.className = i === currentPage ? 'active' : '';
+                    btn.onclick = () => changePage(i);
+                    container.appendChild(btn);
+                }
+                
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        const ellipsis = document.createElement('span');
+                        ellipsis.textContent = '...';
+                        ellipsis.style.padding = '0.5rem';
+                        container.appendChild(ellipsis);
+                    }
+                    
+                    const btnLast = document.createElement('button');
+                    btnLast.textContent = totalPages;
+                    btnLast.onclick = () => changePage(totalPages);
+                    container.appendChild(btnLast);
+                }
+                
+                // Next button
+                const nextBtn = document.createElement('button');
+                nextBtn.textContent = 'Next »';
+                nextBtn.disabled = currentPage === totalPages;
+                nextBtn.onclick = () => changePage(currentPage + 1);
+                container.appendChild(nextBtn);
+                
+                // Page info
+                const pageInfo = document.createElement('span');
+                pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${filteredUsers.length} users)`;
+                pageInfo.style.margin = '0 1rem';
+                pageInfo.style.color = '#6b7280';
+                container.appendChild(pageInfo);
+            });
+        }
+        
+        function changePage(page) {
+            currentPage = page;
+            renderUserTable();
+        }
+        
+        function exportUsersToCSV() {
+            const headers = ['Display Name', 'Account Name', 'Email', 'Department', 'Groups', 'Status', 'Last Logon'];
+            let csv = headers.map(h => `"${h}"`).join(',') + '\n';
+            
+            filteredUsers.forEach(user => {
+                const lastLogon = user.LastLogonDate ? 
+                    new Date(parseInt(user.LastLogonDate.replace(/\/Date\((\d+)\)\//, '$1'))).toLocaleDateString() : 
+                    'Never';
+                
+                const row = [
+                    user.DisplayName || '',
+                    user.SamAccountName,
+                    user.EmailAddress || '',
+                    user.Department || '',
+                    user.Groups.join('; '),
+                    user.Enabled ? 'Enabled' : 'Disabled',
+                    lastLogon
+                ].map(value => `"${String(value).replace(/"/g, '""')}"`);
+                
+                csv += row.join(',') + '\n';
+            });
+            
+            downloadCSVContent(csv, 'user-directory.csv');
         }
     </script>
 </body>
@@ -1100,6 +1481,68 @@ function Get-AuditStatistics {
     $stats.DomainsAudited = ($domains | Select-Object -Unique).Count
     
     return $stats
+}
+
+function Get-ProcessedAuditData {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [object[]]$AuditData
+    )
+    
+    $userDirectory = @{}
+    $groupSummary = @{}
+    
+    # Process audit data to create deduplicated user directory
+    foreach ($item in $AuditData) {
+        if ($item.PSObject.Properties.Name -contains 'Members' -and $item.Members) {
+            $groupName = $item.GroupName
+            $domain = $item.Domain
+            
+            if (-not $groupSummary.ContainsKey($groupName)) {
+                $groupSummary[$groupName] = @{
+                    GroupName = $groupName
+                    Domain = $domain
+                    MemberCount = $item.MemberCount
+                    EnabledCount = $item.EnabledMemberCount
+                    DisabledCount = $item.DisabledMemberCount
+                    Description = $item.Description
+                }
+            }
+            
+            foreach ($member in $item.Members) {
+                $userKey = "$($member.SamAccountName)@$domain"
+                
+                if (-not $userDirectory.ContainsKey($userKey)) {
+                    $userDirectory[$userKey] = @{
+                        DisplayName = $member.DisplayName
+                        SamAccountName = $member.SamAccountName
+                        EmailAddress = $member.EmailAddress
+                        Title = $member.Title
+                        Department = $member.Department
+                        Manager = $member.Manager
+                        Enabled = $member.Enabled
+                        LastLogonDate = $member.LastLogonDate
+                        PasswordLastSet = $member.PasswordLastSet
+                        Groups = @()
+                        Domain = $domain
+                    }
+                }
+                
+                # Add group to user's group list if not already present
+                if ($userDirectory[$userKey].Groups -notcontains $groupName) {
+                    $userDirectory[$userKey].Groups += $groupName
+                }
+            }
+        }
+    }
+    
+    return @{
+        Users = $userDirectory.Values
+        Groups = $groupSummary.Values
+        UserCount = $userDirectory.Count
+        GroupCount = $groupSummary.Count
+    }
 }
 
 # Functions are automatically available when dot-sourced

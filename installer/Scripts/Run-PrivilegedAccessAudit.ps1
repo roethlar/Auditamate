@@ -65,7 +65,7 @@
     Requires: Microsoft Graph API permissions (see documentation)
 #>
 
-#Requires -RunAsAdministrator
+# Note: Requires appropriate Microsoft Graph API permissions and Exchange admin roles
 
 [CmdletBinding()]
 param(

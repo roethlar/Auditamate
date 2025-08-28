@@ -65,7 +65,6 @@
     Requires: Admin access to target servers, WinRM enabled
 #>
 
-#Requires -RunAsAdministrator
 #Requires -Modules ActiveDirectory
 
 [CmdletBinding()]

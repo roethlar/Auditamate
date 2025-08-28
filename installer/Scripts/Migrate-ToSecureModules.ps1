@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-#Requires -RunAsAdministrator
+# Note: Requires write access to audit tool installation directory
 
 <#
 .SYNOPSIS

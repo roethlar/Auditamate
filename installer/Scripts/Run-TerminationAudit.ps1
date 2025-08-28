@@ -22,6 +22,10 @@
 .PARAMETER OutputPath
     Path for HTML compliance report. Default: .\Output\Termination_Audit_[timestamp].html
 
+.PARAMETER Users
+    Specific usernames to audit (alternative to Workday integration).
+    When provided, skips Workday API calls and checks compliance for specified users.
+
 .EXAMPLE
     .\Run-TerminationAudit.ps1 -WorkdayTenant "https://wd.company.com" -DaysBack 30
     Checks terminations from last 30 days against AD.
@@ -30,13 +34,16 @@
     .\Run-TerminationAudit.ps1 -CheckAzureAD -DaysBack 90
     Validates 90 days of terminations including Azure AD status.
 
+.EXAMPLE
+    .\Run-TerminationAudit.ps1 -Users @("jsmith", "bdoe") -CheckAzureAD
+    Manually checks specified users for termination compliance.
+
 .NOTES
     Author: IT Security Team
     Version: 1.0
     Requires: Workday API access, AD read permissions
 #>
 
-#Requires -RunAsAdministrator
 #Requires -Modules ActiveDirectory
 
 [CmdletBinding()]
@@ -54,11 +61,18 @@ param(
     [switch]$CheckAzureAD,
     
     [Parameter(Mandatory=$false)]
-    [string]$OutputDirectory = "$(Split-Path $PSScriptRoot -Parent)\Output\Termination_Audit_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+    [string]$OutputDirectory = "$(Split-Path $PSScriptRoot -Parent)\Output\Termination_Audit_$(Get-Date -Format 'yyyyMMdd_HHmmss')",
+    
+    [Parameter(Mandatory=$false)]
+    [string[]]$Users
 )
 
 Write-Host "`n=== User Termination Compliance Audit ===" -ForegroundColor Cyan
-Write-Host "Checking terminations from last $DaysBack days`n" -ForegroundColor Yellow
+if ($Users -and $Users.Count -gt 0) {
+    Write-Host "Manual audit mode: Checking specified users`n" -ForegroundColor Yellow
+} else {
+    Write-Host "Workday integration mode: Checking terminations from last $DaysBack days`n" -ForegroundColor Yellow
+}
 
 try {
     # Import required modules
@@ -66,26 +80,47 @@ try {
     . "$modulePath\Modules\Workday-Integration.ps1"
     . "$modulePath\Modules\Audit-StandardOutput.ps1"
     
-    # Get Workday credentials if not provided
-    if (!$WorkdayCredential) {
-        Write-Host "Enter Workday API credentials:" -ForegroundColor Yellow
-        $WorkdayCredential = Get-Credential -Message "Enter Workday Integration User credentials"
+    # Get Workday credentials only if we're not checking specific users
+    if (!$Users -or $Users.Count -eq 0) {
+        if (!$WorkdayCredential) {
+            Write-Host "Enter Workday API credentials:" -ForegroundColor Yellow
+            $WorkdayCredential = Get-Credential -Message "Enter Workday Integration User credentials"
+        }
+        
+        if (!$WorkdayTenant) {
+            $WorkdayTenant = Read-Host "Enter Workday tenant URL (e.g., https://wd2-impl-services1.workday.com/ccx/service/tenantname)"
+        }
     }
     
-    if (!$WorkdayTenant) {
-        $WorkdayTenant = Read-Host "Enter Workday tenant URL (e.g., https://wd2-impl-services1.workday.com/ccx/service/tenantname)"
-    }
-    
-    # Step 1: Get terminated users from Workday
-    Write-Host "Retrieving terminated users from Workday..." -ForegroundColor Yellow
-    $startDate = (Get-Date).AddDays(-$DaysBack)
-    $terminatedUsers = Get-WorkdayTerminatedUsers -TenantUrl $WorkdayTenant -Credential $WorkdayCredential -StartDate $startDate
-    
-    Write-Host "Found $($terminatedUsers.Count) terminations in the last $DaysBack days" -ForegroundColor Green
-    
-    if ($terminatedUsers.Count -eq 0) {
-        Write-Host "No terminations found in the specified period." -ForegroundColor Yellow
-        return
+    # Step 1: Get users to audit (either from Workday or specified list)
+    if ($Users -and $Users.Count -gt 0) {
+        Write-Host "Checking compliance for specified users: $($Users -join ', ')" -ForegroundColor Yellow
+        
+        # Create mock termination objects for specified users
+        $terminatedUsers = @()
+        foreach ($user in $Users) {
+            $terminatedUsers += [PSCustomObject]@{
+                EmployeeId = $user
+                Username = $user
+                DisplayName = $user
+                Email = "$user@$env:USERDNSDOMAIN"
+                TerminationDate = Get-Date  # Assume today for manual check
+                Department = "Unknown"
+                Manager = "Unknown"
+            }
+        }
+        Write-Host "Created audit entries for $($terminatedUsers.Count) specified users" -ForegroundColor Green
+    } else {
+        Write-Host "Retrieving terminated users from Workday..." -ForegroundColor Yellow
+        $startDate = (Get-Date).AddDays(-$DaysBack)
+        $terminatedUsers = Get-WorkdayTerminatedUsers -TenantUrl $WorkdayTenant -Credential $WorkdayCredential -StartDate $startDate
+        
+        Write-Host "Found $($terminatedUsers.Count) terminations in the last $DaysBack days" -ForegroundColor Green
+        
+        if ($terminatedUsers.Count -eq 0) {
+            Write-Host "No terminations found in the specified period." -ForegroundColor Yellow
+            return
+        }
     }
     
     # Step 2: Check AD/Azure AD compliance

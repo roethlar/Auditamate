@@ -501,11 +501,11 @@ function New-EnhancedWebReport {
 "@
 
     if ($embeddedImages.Count -gt 0) {
-        $htmlContent += '<button class="nav-tab" onclick="showTab(' + "'screenshots'" + ')">Screenshots</button>'
+        $htmlContent += '<button class="nav-tab" onclick="showTab(&quot;screenshots&quot;)">Screenshots</button>'
     }
     
     if ($embeddedData.Keys.Count -gt 0) {
-        $htmlContent += '<button class="nav-tab" onclick="showTab(' + "'exports'" + ')">Data Exports</button>'
+        $htmlContent += '<button class="nav-tab" onclick="showTab(&quot;exports&quot;)">Data Exports</button>'
     }
 
     $htmlContent += @"
@@ -531,7 +531,7 @@ function New-EnhancedWebReport {
         
         $htmlContent += @"
                     <div class="stat-card $cardClass">
-                        <p>$($stat.Name -replace '([A-Z])', ' $1' -replace '^ ', '')</p>
+                        <p>$($stat.Name -creplace '(?<!^)([A-Z])', ' $1')</p>
                         <h3>$($stat.Value)</h3>
                     </div>
 "@
@@ -563,7 +563,7 @@ function New-EnhancedWebReport {
                 <h2>Audit Results</h2>
                 <div class="search-controls">
                     <input type="text" class="search-input" id="dataSearch" placeholder="Search audit data..." onkeyup="searchData()">
-                    <button class="btn" onclick="exportTableToCSV('audit-data-table', 'audit-results.csv')">Export CSV</button>
+                    <button class="btn" onclick="exportTableToCSV(&quot;audit-data-table&quot;, &quot;audit-results.csv&quot;)">Export CSV</button>
                 </div>
                 
                 <table class="data-table" id="audit-data-table">
@@ -647,7 +647,7 @@ function New-EnhancedWebReport {
             $data = $embeddedData[$dataFile]
             $htmlContent += @"
                 <h3>$dataFile</h3>
-                <button class="btn btn-secondary" onclick="downloadCSV('$dataFile', '$($dataFile -replace '\.csv$', '')')">Download CSV</button>
+                <button class="btn btn-secondary" onclick="downloadCSV(&quot;$dataFile&quot;, &quot;$($dataFile -replace '\.csv$', '')&quot;)">Download CSV</button>
                 <table class="data-table" style="margin-top: 1rem;">
                     <thead>
                         <tr>
@@ -720,7 +720,7 @@ function New-EnhancedWebReport {
             document.getElementById(tabName).classList.add('active');
             
             // Add active class to clicked tab
-            event.target.classList.add('active');
+            document.querySelector('.nav-tab[onclick*="' + tabName + '"]').classList.add('active');
         }
         
         function searchData() {
@@ -1027,7 +1027,8 @@ function New-EnhancedWebReport {
         New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
     }
     
-    $htmlContent | Out-File -FilePath $OutputPath -Encoding UTF8
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($OutputPath, $htmlContent, $utf8NoBom)
     
     Write-Host "Enhanced web report generated: $OutputPath" -ForegroundColor Green
     Write-Host "  - Embedded $($embeddedImages.Count) images" -ForegroundColor Cyan
